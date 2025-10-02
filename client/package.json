@@ -1,0 +1,68 @@
+{
+  "name": "greedoc-client",
+  "version": "1.0.0",
+  "description": "Frontend client for Greedoc - AI-powered health companion",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "axios": "^1.6.2",
+    "chart.js": "^4.4.0",
+    "clsx": "^2.0.0",
+    "date-fns": "^2.30.0",
+    "framer-motion": "^10.18.0",
+    "react": "^18.2.0",
+    "react-calendar": "^4.6.0",
+    "react-chartjs-2": "^5.2.0",
+    "react-datepicker": "^4.21.0",
+    "react-dom": "^18.2.0",
+    "react-dropzone": "^14.2.3",
+    "react-hook-form": "^7.48.2",
+    "react-hot-toast": "^2.4.1",
+    "react-icons": "^4.12.0",
+    "react-modal": "^3.16.1",
+    "react-query": "^3.39.3",
+    "react-router-dom": "^6.8.1",
+    "react-select": "^5.8.0",
+    "react-tooltip": "^5.21.4",
+    "tailwind-merge": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/react": "^18.2.43",
+    "@types/react-datepicker": "^4.19.4",
+    "@types/react-dom": "^18.2.17",
+    "@types/react-modal": "^3.16.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.55.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.3.6",
+    "typescript": "^5.3.3",
+    "vite": "^5.4.20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

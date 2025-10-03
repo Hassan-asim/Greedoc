@@ -1,0 +1,123 @@
+# Greedoc - AI-Powered Health Companion
+# Requirements and Dependencies
+
+## System Requirements
+- Node.js >= 16.0.0
+- npm >= 8.0.0
+- Firebase project with Firestore enabled
+- Modern web browser (Chrome, Firefox, Safari, Edge)
+
+## Backend Dependencies (server/)
+express==4.18.2
+cors==2.8.5
+helmet==7.1.0
+bcryptjs==2.4.3
+jsonwebtoken==9.0.2
+express-validator==7.0.1
+firebase-admin==12.0.0
+socket.io==4.7.5
+axios==1.6.2
+dotenv==16.3.1
+node-cron==3.0.3
+
+## Frontend Dependencies (client/)
+react==18.2.0
+react-dom==18.2.0
+react-router-dom==6.20.1
+@types/react==18.2.43
+@types/react-dom==18.2.17
+typescript==5.3.3
+vite==5.0.8
+@vitejs/plugin-react==4.2.1
+tailwindcss==3.3.6
+autoprefixer==10.4.16
+postcss==8.4.32
+framer-motion==10.16.16
+react-icons==4.12.0
+react-hot-toast==2.4.1
+react-query==3.39.3
+react-dropzone==14.2.3
+firebase==10.7.1
+socket.io-client==4.7.5
+
+## Development Dependencies
+@types/node==20.10.5
+@types/bcryptjs==2.4.6
+@types/jsonwebtoken==9.0.5
+@types/cors==2.8.17
+@types/express==4.17.21
+@typescript-eslint/eslint-plugin==6.15.0
+@typescript-eslint/parser==6.15.0
+eslint==8.56.0
+eslint-plugin-react==7.33.2
+eslint-plugin-react-hooks==4.6.0
+prettier==3.1.1
+
+## Firebase Configuration Required
+- Firebase project with Firestore Database enabled
+- Firebase service account JSON file
+- Firebase web app configuration
+
+## Environment Variables Required
+# Copy from setup/env.example and fill in your values
+JWT_SECRET=your_jwt_secret_here
+JWT_REFRESH_SECRET=your_refresh_secret_here
+FIREBASE_PROJECT_ID=greedoc
+FIREBASE_PRIVATE_KEY_ID=your_private_key_id
+FIREBASE_PRIVATE_KEY=your_private_key
+FIREBASE_CLIENT_EMAIL=your_client_email
+FIREBASE_CLIENT_ID=your_client_id
+FIREBASE_CLIENT_X509_CERT_URL=your_cert_url
+GLM_API_KEY=your_glm_api_key
+GLM_API_URL=https://open.bigmodel.cn/api/paas/v4/chat/completions
+GLM_MODEL=glm-4
+OPENAI_API_KEY=your_openai_api_key
+GROQ_API_KEY=your_groq_api_key
+CLIENT_URL=http://localhost:3000
+HEALTH_AGENT_ENABLED=true
+NOTIFICATION_INTERVAL=300000
+
+## Installation Instructions
+1. Clone the repository
+2. Install backend dependencies: cd server && npm install
+3. Install frontend dependencies: cd client && npm install
+4. Copy setup/env.example to .env and fill in your values
+5. Place your Firebase service account JSON file in the root directory
+6. Start the backend: cd server && npm start
+7. Start the frontend: cd client && npm run dev
+
+## API Endpoints
+- Authentication: /api/auth/*
+- Users: /api/users/*
+- Patients: /api/patients/*
+- Chat: /api/chat/*
+- AI: /api/ai/*
+- Health: /api/health/*
+- Medications: /api/medications/*
+- Appointments: /api/appointments/*
+
+## Features
+- Dual Portal System (Doctor & Patient)
+- Real-time Chat with FCM notifications
+- AI Virtual Doctor (GLM API)
+- Patient Management System
+- Health Records & Tracking
+- Report Upload System
+- Calendar & Appointments
+- Push Notifications
+- Responsive Design
+- Dark/Light Theme
+
+## Security Features
+- JWT Authentication
+- Password Hashing (bcrypt)
+- Input Validation
+- CORS Protection
+- Helmet Security Headers
+- Firebase Security Rules
+
+## Browser Support
+- Chrome >= 90
+- Firefox >= 88
+- Safari >= 14
+- Edge >= 90

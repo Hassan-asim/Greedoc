@@ -45,8 +45,12 @@ const db = admin.firestore();
 // Get Realtime Database instance (if needed)
 const rtdb = admin.database();
 
+// Get FCM instance for push notifications
+const messaging = admin.messaging();
+
 module.exports = {
   admin,
   db,
-  rtdb
+  rtdb,
+  messaging
 };

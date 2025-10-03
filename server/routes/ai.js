@@ -1,394 +1,245 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const OpenAI = require('openai');
-const HealthRecord = require('../models/HealthRecord');
-const Medication = require('../models/Medication');
 const { authenticateToken } = require('../middleware/auth');
+const axios = require('axios');
 
 const router = express.Router();
 
-// Initialize OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 /**
- * @route   POST /api/ai/health-insights
- * @desc    Get AI-powered health insights
+ * @route   POST /api/ai/chat
+ * @desc    Chat with virtual doctor
  * @access  Private
  */
-router.post('/health-insights', authenticateToken, [
-  body('query').trim().notEmpty().withMessage('Query is required'),
-  body('context').optional().isObject().withMessage('Context must be an object')
+router.post('/chat', authenticateToken, [
+  body('message').notEmpty().withMessage('Message is required'),
+  body('type').isIn(['virtual_doctor', 'health_assistant']).withMessage('Valid type is required'),
 ], async (req, res) => {
   try {
-    // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Validation failed',
-        errors: errors.array()
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Validation failed', 
+        errors: errors.array() 
       });
     }
 
-    const { query, context = {} } = req.body;
+    const { message, context = {}, type } = req.body;
     const userId = req.user._id;
 
-    // Get recent health data for context
-    const recentRecords = await HealthRecord.find({ userId })
-      .sort({ date: -1 })
-      .limit(10);
+    // Get AI response based on type
+    let aiResponse;
+    if (type === 'virtual_doctor') {
+      aiResponse = await getVirtualDoctorResponse(message, context, userId);
+    } else {
+      aiResponse = await getHealthAssistantResponse(message, context, userId);
+    }
 
-    const activeMedications = await Medication.find({
-      userId,
-      isActive: true
+    res.json({ 
+      status: 'success', 
+      data: {
+        response: aiResponse,
+        timestamp: new Date(),
+        type: type
+      }
     });
+  } catch (error) {
+    console.error('AI chat error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Failed to get AI response', 
+      error: error.message 
+    });
+  }
+});
 
-    // Prepare context for AI
-    const healthContext = {
-      user: {
-        age: req.user.age,
-        gender: req.user.gender,
-        medicalInfo: req.user.medicalInfo
-      },
-      recentRecords: recentRecords.map(record => ({
-        type: record.recordType,
-        title: record.title,
-        date: record.date,
-        description: record.description
-      })),
-      medications: activeMedications.map(med => ({
-        name: med.name,
-        dosage: med.dosage,
-        frequency: med.frequency.timesPerDay
-      }))
-    };
+/**
+ * @route   GET /api/ai/insights/:patientId
+ * @desc    Get AI health insights for a patient
+ * @access  Private
+ */
+router.get('/insights/:patientId', authenticateToken, async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    const userId = req.user._id;
 
-    // Create AI prompt
-    const systemPrompt = `You are Greedoc, an AI-powered health companion. You provide personalized health insights based on user data. 
+    // Only doctors can access patient insights
+    if (req.user.role !== 'doctor' && userId !== patientId) {
+      return res.status(403).json({ 
+        status: 'error', 
+        message: 'Access denied' 
+      });
+    }
 
-IMPORTANT GUIDELINES:
-- Always remind users to consult healthcare professionals for medical advice
-- Do not provide specific medical diagnoses
-- Focus on general health insights and recommendations
-- Be encouraging and supportive
-- Use the user's health data to provide personalized insights
-- Keep responses concise but informative
+    const insights = await generateHealthInsights(patientId);
 
-User Health Context:
-${JSON.stringify(healthContext, null, 2)}
+    res.json({ 
+      status: 'success', 
+      data: insights
+    });
+  } catch (error) {
+    console.error('Get insights error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Failed to get health insights', 
+      error: error.message 
+    });
+  }
+});
 
-Please provide helpful health insights based on the user's query and their health data.`;
+/**
+ * @route   POST /api/ai/analyze-symptoms
+ * @desc    Analyze patient symptoms
+ * @access  Private
+ */
+router.post('/analyze-symptoms', authenticateToken, [
+  body('symptoms').isArray().withMessage('Symptoms must be an array'),
+  body('patientId').notEmpty().withMessage('Patient ID is required'),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Validation failed', 
+        errors: errors.array() 
+      });
+    }
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+    const { symptoms, patientId } = req.body;
+    const userId = req.user._id;
+
+    // Only doctors can analyze symptoms for patients
+    if (req.user.role !== 'doctor' && userId !== patientId) {
+      return res.status(403).json({ 
+        status: 'error', 
+        message: 'Access denied' 
+      });
+    }
+
+    const analysis = await analyzeSymptoms(symptoms, patientId);
+
+    res.json({ 
+      status: 'success', 
+      data: analysis
+    });
+  } catch (error) {
+    console.error('Analyze symptoms error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Failed to analyze symptoms', 
+      error: error.message 
+    });
+  }
+});
+
+// Helper functions
+async function getVirtualDoctorResponse(message, context, userId) {
+  try {
+    // Use GLM API for virtual doctor responses
+    const glmApiKey = process.env.GLM_API_KEY;
+    const glmApiUrl = process.env.GLM_API_URL || 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+    const glmModel = process.env.GLM_MODEL || 'glm-4';
+    
+    if (!glmApiKey) {
+      // Fallback to rule-based responses if no API key
+      return getFallbackDoctorResponse(message);
+    }
+
+    const response = await axios.post(glmApiUrl, {
+      model: glmModel,
       messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: query }
+        {
+          role: 'system',
+          content: `You are a helpful virtual doctor assistant. Provide medical advice, answer health questions, and offer guidance. 
+                   Always remind users to consult with real healthcare professionals for serious concerns. 
+                   Be empathetic, professional, and informative. Keep responses concise but helpful.
+                   Respond in a conversational and caring manner.`
+        },
+        {
+          role: 'user',
+          content: message
+        }
       ],
       max_tokens: 500,
-      temperature: 0.7
-    });
-
-    const aiResponse = completion.choices[0].message.content;
-
-    res.json({
-      status: 'success',
-      data: {
-        query,
-        response: aiResponse,
-        timestamp: new Date().toISOString(),
-        context: healthContext
+      temperature: 0.7,
+      stream: false
+    }, {
+      headers: {
+        'Authorization': `Bearer ${glmApiKey}`,
+        'Content-Type': 'application/json'
       }
     });
 
+    return response.data.choices[0].message.content;
   } catch (error) {
-    console.error('AI health insights error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to generate health insights',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
+    console.error('GLM API error:', error);
+    return getFallbackDoctorResponse(message);
   }
-});
+}
 
-/**
- * @route   POST /api/ai/medication-analysis
- * @desc    Analyze medication interactions and provide insights
- * @access  Private
- */
-router.post('/medication-analysis', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user._id;
+function getFallbackDoctorResponse(message) {
+  const lowerMessage = message.toLowerCase();
+  
+  if (lowerMessage.includes('pain') || lowerMessage.includes('hurt')) {
+    return "I understand you're experiencing pain. Can you describe the location, intensity (1-10 scale), and when it started? This will help me provide better guidance. For severe pain, please consult a healthcare professional immediately.";
+  } else if (lowerMessage.includes('medication') || lowerMessage.includes('medicine')) {
+    return "I can help with medication-related questions. Are you asking about dosage, side effects, interactions, or something else specific? Remember to always consult your doctor before making any medication changes.";
+  } else if (lowerMessage.includes('exercise') || lowerMessage.includes('workout')) {
+    return "Exercise is great for your health! What type of physical activity are you interested in? I can provide personalized recommendations based on your health status. Start slowly if you're new to exercise.";
+  } else if (lowerMessage.includes('diet') || lowerMessage.includes('food') || lowerMessage.includes('eat')) {
+    return "Nutrition plays a crucial role in your health. What specific dietary questions do you have? I can help with meal planning, food choices, or dietary restrictions. A balanced diet is key to good health.";
+  } else if (lowerMessage.includes('sleep') || lowerMessage.includes('tired')) {
+    return "Sleep is essential for your health. How many hours are you sleeping? Are you having trouble falling asleep or staying asleep? Good sleep hygiene can make a big difference.";
+  } else if (lowerMessage.includes('stress') || lowerMessage.includes('anxiety')) {
+    return "Stress and anxiety can affect your physical health. What's causing you stress? I can suggest relaxation techniques, but consider speaking with a mental health professional for ongoing concerns.";
+  } else {
+    return "Thank you for sharing that information. Could you provide more details so I can give you the most helpful advice? I'm here to assist with your health concerns. Remember, I'm a virtual assistant - for serious medical issues, please consult a healthcare professional.";
+  }
+}
 
-    // Get all active medications
-    const medications = await Medication.find({
-      userId,
-      isActive: true
-    });
+async function getHealthAssistantResponse(message, context, userId) {
+  // Similar to virtual doctor but with different tone
+  return getFallbackDoctorResponse(message);
+}
 
-    if (medications.length === 0) {
-      return res.json({
-        status: 'success',
-        data: {
-          analysis: "No active medications found for analysis.",
-          recommendations: ["Continue maintaining a healthy lifestyle."]
-        }
-      });
+async function generateHealthInsights(patientId) {
+  // This would typically analyze patient data and generate insights
+  // For now, return mock insights
+  return [
+    {
+      id: '1',
+      title: 'Exercise Recommendation',
+      description: 'Based on your recent activity patterns, consider adding 15 minutes of cardio to your morning routine.',
+      type: 'recommendation',
+      priority: 'medium',
+      timestamp: new Date()
+    },
+    {
+      id: '2',
+      title: 'Health Prediction',
+      description: 'Your current trends suggest improved cardiovascular health over the next 30 days.',
+      type: 'prediction',
+      priority: 'high',
+      timestamp: new Date()
     }
+  ];
+}
 
-    // Prepare medication data for AI analysis
-    const medicationData = medications.map(med => ({
-      name: med.name,
-      genericName: med.genericName,
-      dosage: med.dosage,
-      frequency: med.frequency,
-      purpose: med.purpose,
-      sideEffects: med.sideEffects,
-      interactions: med.interactions
-    }));
-
-    const systemPrompt = `You are a medication analysis AI assistant. Analyze the user's medications and provide insights about:
-
-1. Potential drug interactions
-2. Side effect monitoring
-3. Adherence recommendations
-4. General medication management tips
-
-IMPORTANT: Always remind users to consult their healthcare provider or pharmacist for specific medical advice.
-
-User's Medications:
-${JSON.stringify(medicationData, null, 2)}
-
-Provide a comprehensive analysis focusing on safety and optimization.`;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: "Please analyze my medications and provide insights." }
-      ],
-      max_tokens: 800,
-      temperature: 0.6
-    });
-
-    const analysis = completion.choices[0].message.content;
-
-    res.json({
-      status: 'success',
-      data: {
-        medications: medicationData,
-        analysis,
-        timestamp: new Date().toISOString()
-      }
-    });
-
-  } catch (error) {
-    console.error('Medication analysis error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to analyze medications',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
-  }
-});
-
-/**
- * @route   POST /api/ai/symptom-checker
- * @desc    AI-powered symptom analysis
- * @access  Private
- */
-router.post('/symptom-checker', authenticateToken, [
-  body('symptoms').isArray().withMessage('Symptoms must be an array'),
-  body('symptoms.*.name').trim().notEmpty().withMessage('Symptom name is required'),
-  body('symptoms.*.severity').isIn(['mild', 'moderate', 'severe', 'critical'])
-    .withMessage('Invalid severity level'),
-  body('duration').optional().trim().notEmpty().withMessage('Duration cannot be empty')
-], async (req, res) => {
-  try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Validation failed',
-        errors: errors.array()
-      });
-    }
-
-    const { symptoms, duration, additionalInfo } = req.body;
-    const userId = req.user._id;
-
-    // Get user's medical history for context
-    const medicalHistory = await HealthRecord.find({
-      userId,
-      recordType: { $in: ['symptom', 'chronic_condition', 'allergy'] }
-    }).sort({ date: -1 }).limit(20);
-
-    const systemPrompt = `You are a symptom analysis AI assistant. Analyze the user's symptoms and provide insights.
-
-IMPORTANT GUIDELINES:
-- This is NOT a medical diagnosis
-- Always recommend consulting healthcare professionals
-- Focus on general guidance and when to seek medical attention
-- Consider the user's medical history
-- Be supportive and non-alarming
-
-User Information:
-- Age: ${req.user.age}
-- Gender: ${req.user.gender}
-- Medical History: ${JSON.stringify(medicalHistory.map(record => ({
-      type: record.recordType,
-      title: record.title,
-      date: record.date
-    })), null, 2)}
-
-Current Symptoms:
-${JSON.stringify(symptoms, null, 2)}
-Duration: ${duration || 'Not specified'}
-Additional Info: ${additionalInfo || 'None'}
-
-Provide analysis focusing on:
-1. Possible conditions to consider
-2. When to seek immediate medical attention
-3. General self-care recommendations
-4. Follow-up actions`;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: "Please analyze my symptoms." }
-      ],
-      max_tokens: 1000,
-      temperature: 0.6
-    });
-
-    const analysis = completion.choices[0].message.content;
-
-    // Save symptom record
-    const symptomRecord = new HealthRecord({
-      userId,
-      recordType: 'symptom',
-      title: 'Symptom Check',
-      description: `AI symptom analysis for: ${symptoms.map(s => s.name).join(', ')}`,
-      date: new Date(),
-      symptoms: symptoms,
-      notes: `Duration: ${duration || 'Not specified'}. Additional info: ${additionalInfo || 'None'}`
-    });
-
-    await symptomRecord.save();
-
-    res.json({
-      status: 'success',
-      data: {
-        symptoms,
-        analysis,
-        recordId: symptomRecord._id,
-        timestamp: new Date().toISOString()
-      }
-    });
-
-  } catch (error) {
-    console.error('Symptom checker error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to analyze symptoms',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
-  }
-});
-
-/**
- * @route   GET /api/ai/health-summary
- * @desc    Generate AI-powered health summary
- * @access  Private
- */
-router.get('/health-summary', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user._id;
-
-    // Get comprehensive health data
-    const [recentRecords, medications, appointments] = await Promise.all([
-      HealthRecord.find({ userId }).sort({ date: -1 }).limit(30),
-      Medication.find({ userId, isActive: true }),
-      HealthRecord.find({ 
-        userId, 
-        recordType: 'appointment',
-        date: { $gte: new Date() }
-      }).sort({ date: 1 }).limit(5)
-    ]);
-
-    const healthData = {
-      user: {
-        age: req.user.age,
-        gender: req.user.gender,
-        medicalInfo: req.user.medicalInfo
-      },
-      recentActivity: recentRecords.map(record => ({
-        type: record.recordType,
-        title: record.title,
-        date: record.date
-      })),
-      medications: medications.map(med => ({
-        name: med.name,
-        adherence: med.adherence.adherenceRate
-      })),
-      upcomingAppointments: appointments.map(apt => ({
-        title: apt.title,
-        date: apt.date,
-        provider: apt.provider
-      }))
-    };
-
-    const systemPrompt = `You are Greedoc's AI health assistant. Generate a comprehensive health summary based on the user's data.
-
-IMPORTANT:
-- Provide encouraging and actionable insights
-- Highlight positive trends and areas for improvement
-- Suggest specific health goals
-- Always remind users to consult healthcare professionals
-
-User Health Data:
-${JSON.stringify(healthData, null, 2)}
-
-Generate a personalized health summary including:
-1. Overall health status
-2. Key trends and patterns
-3. Medication adherence insights
-4. Upcoming health priorities
-5. Personalized recommendations`;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: "Generate my health summary." }
-      ],
-      max_tokens: 1200,
-      temperature: 0.7
-    });
-
-    const summary = completion.choices[0].message.content;
-
-    res.json({
-      status: 'success',
-      data: {
-        summary,
-        healthData,
-        generatedAt: new Date().toISOString()
-      }
-    });
-
-  } catch (error) {
-    console.error('Health summary error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to generate health summary',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
-  }
-});
+async function analyzeSymptoms(symptoms, patientId) {
+  // This would typically use AI to analyze symptoms
+  // For now, return a basic analysis
+  return {
+    possibleConditions: ['Common cold', 'Allergies', 'Stress-related symptoms'],
+    recommendations: [
+      'Get plenty of rest',
+      'Stay hydrated',
+      'Monitor symptoms for 24-48 hours',
+      'Consult a healthcare professional if symptoms worsen'
+    ],
+    urgency: 'low',
+    timestamp: new Date()
+  };
+}
 
 module.exports = router;

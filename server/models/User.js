@@ -1,3 +1,4 @@
+const bcrypt = require('bcryptjs');
 const { db } = require('../config/firebase');
 
 class User {
@@ -27,6 +28,8 @@ class User {
     this.lastLogin = data.lastLogin || null;
     this.isActive = data.isActive !== undefined ? data.isActive : true;
     this.role = data.role || 'user';
+    this.fcmToken = data.fcmToken || null;
+    this.isOnline = data.isOnline || false;
     this.createdAt = data.createdAt || new Date();
     this.updatedAt = data.updatedAt || new Date();
   }
@@ -110,9 +113,73 @@ class User {
     }
   }
 
+  static async findByIdAndUpdate(id, updates, options = {}) {
+    try {
+      const userDoc = await db.collection('users').doc(id).get();
+      
+      if (!userDoc.exists) {
+        return null;
+      }
+      
+      const userData = { id: userDoc.id, ...userDoc.data() };
+      const user = new User(userData);
+      
+      // Apply updates
+      Object.keys(updates).forEach(key => {
+        if (updates[key] !== undefined) {
+          user[key] = updates[key];
+        }
+      });
+      
+      // Hash password if it was updated
+      if (updates.password) {
+        await user.hashPassword();
+      }
+      
+      user.updatedAt = new Date();
+      await user.save();
+      
+      return user;
+    } catch (error) {
+      throw new Error(`Error updating user: ${error.message}`);
+    }
+  }
+
+  static async findByRole(role) {
+    try {
+      const usersSnapshot = await db.collection('users').where('role', '==', role).get();
+      const users = [];
+      
+      usersSnapshot.forEach(doc => {
+        const userData = { id: doc.id, ...doc.data() };
+        users.push(new User(userData));
+      });
+      
+      return users;
+    } catch (error) {
+      throw new Error(`Error finding users by role: ${error.message}`);
+    }
+  }
+
+  // Password methods
+  async hashPassword() {
+    if (this.password) {
+      this.password = await bcrypt.hash(this.password, 12);
+    }
+  }
+
+  async comparePassword(candidatePassword) {
+    return await bcrypt.compare(candidatePassword, this.password);
+  }
+
   // Instance methods
   async save() {
     try {
+      // Hash password before saving if it's a new user or password was changed
+      if (!this.id || this.password) {
+        await this.hashPassword();
+      }
+      
       const userData = this.toObject();
       delete userData.id; // Remove id from data to save
       
@@ -169,6 +236,8 @@ class User {
       lastLogin: this.lastLogin,
       isActive: this.isActive,
       role: this.role,
+      fcmToken: this.fcmToken,
+      isOnline: this.isOnline,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       fullName: this.fullName,

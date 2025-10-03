@@ -11,11 +11,32 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 env-template.txt
+env.example
 
 # Firebase service account keys
 *-firebase-adminsdk-*.json
 firebase-adminsdk-*.json
 firebase-service-account.json
+greedoc-firebase-adminsdk-*.json
+
+# Test files
+*test*.js
+*test*.ts
+*test*.json
+test/
+tests/
+__tests__/
+
+# Setup files (security risk)
+setup/
+*.bat
+*.sh
+
+# Deployment files
+vercel.json
+cloudbuild.yaml
+Dockerfile*
+docker-compose*.yml
 
 # Build outputs
 build/

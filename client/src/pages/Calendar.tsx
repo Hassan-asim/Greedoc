@@ -155,7 +155,7 @@ export const Calendar: React.FC = () => {
   const todayEvents = selectedDate ? getEventsForDate(selectedDate) : []
 
   return (
-    <div className="min-h-screen bg-secondary-100">
+    <div className="min-h-screen bg-white">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -249,7 +249,7 @@ export const Calendar: React.FC = () => {
                 <div className="grid grid-cols-7">
                   {daysInMonth.map((day, index) => {
                     if (day === null) {
-                      return <div key={index} className="p-4"></div>
+                      return <div key={`empty-${index}`} className="p-4"></div>
                     }
 
                     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
@@ -257,7 +257,7 @@ export const Calendar: React.FC = () => {
 
                     return (
                       <div
-                        key={day}
+                        key={`${currentDate.getFullYear()}-${currentDate.getMonth()}-${day}-${index}`}
                         className={`p-2 min-h-24 border-r border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
                           isToday(day) ? 'bg-primary-50 dark:bg-primary-900' : ''
                         } ${isSelected(day) ? 'ring-2 ring-primary-500' : ''}`}

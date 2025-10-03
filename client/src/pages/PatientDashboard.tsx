@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import { EmergencyMode } from '../components/EmergencyMode'
 import { 
   FiHeart, 
@@ -13,7 +14,9 @@ import {
   FiZap,
   FiPlus,
   FiEye,
-  FiEdit
+  FiEdit,
+  FiMessageCircle,
+  FiFileText
 } from 'react-icons/fi'
 
 interface HealthMetric {
@@ -43,91 +46,35 @@ interface AIInsight {
   priority: 'high' | 'medium' | 'low'
 }
 
-const mockHealthMetrics: HealthMetric[] = [
-  {
-    id: '1',
-    type: 'steps',
-    value: '8,542',
-    unit: 'steps',
-    trend: 'up',
-    status: 'good',
-    timestamp: 'Today'
-  },
-  {
-    id: '2',
-    type: 'heart_rate',
-    value: '72',
-    unit: 'bpm',
-    trend: 'stable',
-    status: 'good',
-    timestamp: '2 min ago'
-  },
-  {
-    id: '3',
-    type: 'sleep',
-    value: '7.5',
-    unit: 'hours',
-    trend: 'down',
-    status: 'warning',
-    timestamp: 'Last night'
-  },
-  {
-    id: '4',
-    type: 'blood_pressure',
-    value: '120/80',
-    unit: 'mmHg',
-    trend: 'stable',
-    status: 'good',
-    timestamp: '1 hour ago'
-  }
-]
-
-const mockRiskAlerts: RiskAlert[] = [
-  {
-    id: '1',
-    type: 'medium',
-    title: 'Sleep Quality Alert',
-    description: 'Your sleep duration has decreased by 15% this week',
-    action: 'Consider adjusting bedtime routine',
-    timestamp: '2 hours ago'
-  },
-  {
-    id: '2',
-    type: 'low',
-    title: 'Exercise Reminder',
-    description: 'You\'re 500 steps away from your daily goal',
-    action: 'Take a short walk',
-    timestamp: '1 hour ago'
-  }
-]
-
-const mockAIInsights: AIInsight[] = [
-  {
-    id: '1',
-    title: 'Medication Optimization',
-    description: 'Based on your recent blood pressure readings, consider taking your medication 30 minutes earlier.',
-    type: 'recommendation',
-    priority: 'high'
-  },
-  {
-    id: '2',
-    title: 'Exercise Recommendation',
-    description: 'Your heart rate variability suggests you\'re ready for moderate intensity exercise today.',
-    type: 'recommendation',
-    priority: 'medium'
-  },
-  {
-    id: '3',
-    title: 'Sleep Pattern Analysis',
-    description: 'Your sleep efficiency has improved by 12% this month. Keep maintaining your current routine.',
-    type: 'prediction',
-    priority: 'low'
-  }
-]
+// Real data will be loaded from the database
 
 export const PatientDashboard: React.FC = () => {
+  const { user } = useAuth()
   const [selectedMetric, setSelectedMetric] = useState<HealthMetric | null>(null)
   const [showEmergencyMode, setShowEmergencyMode] = useState(false)
+  const [healthMetrics, setHealthMetrics] = useState<HealthMetric[]>([])
+  const [riskAlerts, setRiskAlerts] = useState<RiskAlert[]>([])
+  const [aiInsights, setAIInsights] = useState<AIInsight[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadPatientData()
+  }, [])
+
+  const loadPatientData = async () => {
+    try {
+      setLoading(true)
+      // For now, we'll use empty arrays and show loading states
+      // In a real app, these would be API calls
+      setHealthMetrics([])
+      setRiskAlerts([])
+      setAIInsights([])
+    } catch (error) {
+      console.error('Error loading patient data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getMetricIcon = (type: string) => {
     switch (type) {
@@ -168,7 +115,7 @@ export const PatientDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-secondary-100">
+    <div className="min-h-screen bg-white">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -209,7 +156,16 @@ export const PatientDashboard: React.FC = () => {
 
         {/* Health Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {mockHealthMetrics.map((metric) => {
+          {loading ? (
+            <div className="col-span-full text-center py-8 text-gray-500">Loading health metrics...</div>
+          ) : healthMetrics.length === 0 ? (
+            <div className="col-span-full text-center py-8">
+              <FiActivity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No health data yet</h3>
+              <p className="text-gray-600">Health metrics will appear here as you use the platform</p>
+            </div>
+          ) : (
+            healthMetrics.map((metric) => {
             const IconComponent = getMetricIcon(metric.type)
             return (
               <div
@@ -246,7 +202,8 @@ export const PatientDashboard: React.FC = () => {
                 </div>
               </div>
             )
-          })}
+          })
+          )}
         </div>
 
         {/* Main Content Grid */}
@@ -261,8 +218,17 @@ export const PatientDashboard: React.FC = () => {
                 </div>
               </div>
               <div className="card-content">
-                <div className="space-y-4">
-                  {mockAIInsights.map((insight) => (
+                {loading ? (
+                  <div className="text-center py-8 text-gray-500">Loading AI insights...</div>
+                ) : aiInsights.length === 0 ? (
+                  <div className="text-center py-8">
+                    <FiZap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No AI insights yet</h3>
+                    <p className="text-gray-600">AI insights will appear here as you use the platform</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {aiInsights.map((insight) => (
                     <div
                       key={insight.id}
                       className={`p-4 border-l-4 ${
@@ -290,8 +256,9 @@ export const PatientDashboard: React.FC = () => {
                         </button>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -307,8 +274,17 @@ export const PatientDashboard: React.FC = () => {
                 </div>
               </div>
               <div className="card-content">
-                <div className="space-y-3">
-                  {mockRiskAlerts.map((alert) => (
+                {loading ? (
+                  <div className="text-center py-8 text-gray-500">Loading risk alerts...</div>
+                ) : riskAlerts.length === 0 ? (
+                  <div className="text-center py-8">
+                    <FiCheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No immediate risks detected</h3>
+                    <p className="text-gray-600">Keep up the good work! Your health is looking great.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {riskAlerts.map((alert) => (
                     <div
                       key={alert.id}
                       className={`p-3 border rounded-lg ${getRiskColor(alert.type)}`}
@@ -317,8 +293,9 @@ export const PatientDashboard: React.FC = () => {
                       <p className="text-xs text-gray-600 mt-1">{alert.description}</p>
                       <p className="text-xs text-gray-500 mt-2">{alert.action}</p>
                     </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -344,6 +321,10 @@ export const PatientDashboard: React.FC = () => {
                   <Link to="/health-twin" className="btn btn-outline btn-sm w-full justify-start">
                     <FiEdit className="mr-2 h-4 w-4" />
                     Log Health Data
+                  </Link>
+                  <Link to="/chat" className="btn btn-outline btn-sm w-full justify-start">
+                    <FiMessageCircle className="mr-2 h-4 w-4" />
+                    Chat with Doctor
                   </Link>
                 </div>
               </div>

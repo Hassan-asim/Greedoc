@@ -237,23 +237,32 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* Portal Access Section */}
       <section className="py-20 bg-primary-600">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Ready to Transform Your Health?
+            Ready to Transform Healthcare?
           </h2>
           <p className="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
-            Join Greedoc today and start your journey towards better health management 
-            with AI-powered insights.
+            Choose your portal to access Greedoc's AI-powered health management platform.
           </p>
-          <Link
-            to="/register"
-            className="btn bg-white text-primary-600 hover:bg-gray-100 btn-lg inline-flex items-center"
-          >
-            Get Started Free
-            <FiArrowRight className="ml-2 h-5 w-5" />
-          </Link>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Link
+              to="/doctor/login"
+              className="btn bg-white text-primary-600 hover:bg-gray-100 btn-lg inline-flex items-center w-full sm:w-auto"
+            >
+              <FiUsers className="mr-2 h-5 w-5" />
+              Doctor Portal
+            </Link>
+            <Link
+              to="/patient/login"
+              className="btn bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 btn-lg inline-flex items-center w-full sm:w-auto"
+            >
+              <FiHeart className="mr-2 h-5 w-5" />
+              Patient Portal
+            </Link>
+          </div>
         </div>
       </section>
 

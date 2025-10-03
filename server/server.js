@@ -49,13 +49,21 @@ app.use('/uploads', express.static('uploads'));
 // Firebase is initialized and ready to use
 console.log('✅ Firebase initialized successfully');
 
+// Start Health Agent if enabled
+if (process.env.HEALTH_AGENT_ENABLED === 'true') {
+  const healthAgent = require('./services/healthAgent');
+  healthAgent.start().catch(console.error);
+}
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/patients', require('./routes/patients')); // Added patients routes
 app.use('/api/health', require('./routes/health'));
 app.use('/api/medications', require('./routes/medications'));
 app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/ai', require('./routes/ai'));
+app.use('/api/chat', require('./routes/chat'));
 
 // Health check endpoint
 app.get('/api/health-check', (req, res) => {

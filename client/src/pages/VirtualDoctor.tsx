@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { FiSend, FiZap, FiUser, FiMessageCircle, FiArrowLeft, FiHeart } from 'react-icons/fi'
+import aiService from '../services/aiService'
 import toast from 'react-hot-toast'
 
 interface Message {
@@ -77,37 +78,32 @@ export const VirtualDoctor: React.FC = () => {
     setMessages(prev => [...prev, userMessage])
     setInputText('')
 
-    // Simulate AI response
-    simulateTyping('', () => {
-      let responseText = ''
+    try {
+      // Get AI response from the backend
+      const response = await aiService.chatWithVirtualDoctor(text, { action }, 'virtual_doctor')
       
-      if (action && mockDoctorResponses[action as keyof typeof mockDoctorResponses]) {
-        responseText = mockDoctorResponses[action as keyof typeof mockDoctorResponses]
-      } else {
-        // Generate contextual response based on input
-        const lowerText = text.toLowerCase()
-        if (lowerText.includes('pain') || lowerText.includes('hurt')) {
-          responseText = "I understand you're experiencing pain. Can you describe the location, intensity (1-10 scale), and when it started? This will help me provide better guidance."
-        } else if (lowerText.includes('medication') || lowerText.includes('medicine')) {
-          responseText = "I can help with medication-related questions. Are you asking about dosage, side effects, interactions, or something else specific?"
-        } else if (lowerText.includes('exercise') || lowerText.includes('workout')) {
-          responseText = "Exercise is great for your health! What type of physical activity are you interested in? I can provide personalized recommendations based on your health status."
-        } else if (lowerText.includes('diet') || lowerText.includes('food') || lowerText.includes('eat')) {
-          responseText = "Nutrition plays a crucial role in your health. What specific dietary questions do you have? I can help with meal planning, food choices, or dietary restrictions."
-        } else {
-          responseText = "Thank you for sharing that information. Could you provide more details so I can give you the most helpful advice? I'm here to assist with your health concerns."
-        }
-      }
-
       const doctorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: responseText,
+        text: response.response,
         sender: 'doctor',
         timestamp: new Date()
       }
 
       setMessages(prev => [...prev, doctorMessage])
-    })
+    } catch (error) {
+      console.error('Error getting AI response:', error)
+      toast.error('Failed to get AI response. Please try again.')
+      
+      // Fallback response
+      const doctorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "I'm sorry, I'm having trouble processing your request right now. Please try again or consult with a healthcare professional for immediate concerns.",
+        sender: 'doctor',
+        timestamp: new Date()
+      }
+
+      setMessages(prev => [...prev, doctorMessage])
+    }
   }
 
   const handleQuickReply = (quickReply: QuickReply) => {
@@ -120,7 +116,7 @@ export const VirtualDoctor: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-secondary-100">
+    <div className="min-h-screen bg-white">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">

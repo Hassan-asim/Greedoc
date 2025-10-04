@@ -2,12 +2,13 @@ import { initializeApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "your-api-key",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAsOF47uDVB1_bocWnpD8IHnVFD_6GOwXY",
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "greedoc.firebaseapp.com",
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "greedoc",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "greedoc.appspot.com",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "greedoc.firebasestorage.app",
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "631441516405",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "your-app-id"
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:631441516405:web:e96e6603528100c10d153c",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-045F5FKR3T"
 };
 
 // Initialize Firebase
@@ -22,7 +23,7 @@ export const requestNotificationPermission = async () => {
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
       const token = await getToken(messaging, {
-        vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY || "your-vapid-key"
+        vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY || "BHn7tsnOmHaZ0IpabqydqFQqM6qyVV89bSUSE1pr_YygV_U5qJAJDnIs5veChHx4gZcY4jBegcOY8H6Dz3SW0GA"
       });
       
       if (token) {

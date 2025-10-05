@@ -28,6 +28,12 @@ router.post(
     body("gender")
       .isIn(["male", "female", "other", "prefer_not_to_say"])
       .withMessage("Invalid gender"),
+    body("phoneNumber")
+      .trim()
+      .notEmpty()
+      .withMessage("Phone number is required")
+      .isLength({ min: 10, max: 15 })
+      .withMessage("Phone number must be between 10 and 15 characters"),
     body("specialization")
       .optional()
       .trim()

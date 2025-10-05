@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { FiEye, FiEyeOff, FiHeart, FiMail, FiLock, FiUser, FiPhone } from 'react-icons/fi'
 import { useAuth } from '../contexts/AuthContext'
-import toast from 'react-hot-toast'
 
 interface DoctorLoginForm {
   email: string
@@ -36,7 +35,7 @@ export const DoctorLogin: React.FC = () => {
     handleSubmit,
     watch,
     formState: { errors }
-  } = useForm<DoctorLoginForm | DoctorSignupForm>()
+  } = useForm<DoctorLoginForm & DoctorSignupForm>()
 
   const password = watch('password')
 
@@ -46,8 +45,9 @@ export const DoctorLogin: React.FC = () => {
     
     try {
       if (isSignup) {
-        // Handle doctor signup
-        await registerDoctor(data)
+        // Handle doctor signup - remove confirmPassword from data
+        const { confirmPassword, ...doctorData } = data
+        await registerDoctor(doctorData)
         navigate('/doctor/dashboard')
       } else {
         // Handle doctor login
@@ -61,11 +61,18 @@ export const DoctorLogin: React.FC = () => {
       } else if (error.response?.status === 403) {
         setLoginError('Your account has been deactivated. Please contact support.')
       } else if (error.response?.status === 400) {
-        setLoginError('Please check your email and password format.')
+        if (isSignup) {
+          // Handle registration validation errors
+          const errorMessage = error.response?.data?.message || 'Please check your registration details.'
+          setLoginError(errorMessage)
+        } else {
+          setLoginError('Please check your email and password format.')
+        }
       } else if (error.response?.data?.message) {
         setLoginError(error.response.data.message)
       } else {
-        setLoginError('Login failed. Please try again.')
+        const errorMessage = isSignup ? 'Registration failed. Please try again.' : 'Login failed. Please try again.'
+        setLoginError(errorMessage)
       }
     } finally {
       setIsLoading(false)
@@ -186,7 +193,11 @@ export const DoctorLogin: React.FC = () => {
                   </label>
                   <div className="mt-1 relative">
                     <input
-                      {...register('phoneNumber', { required: 'Phone number is required' })}
+                      {...register('phoneNumber', { 
+                        required: 'Phone number is required',
+                        minLength: { value: 10, message: 'Phone number must be at least 10 characters' },
+                        maxLength: { value: 15, message: 'Phone number must be at most 15 characters' }
+                      })}
                       type="tel"
                       className="input w-full"
                       placeholder="Enter your phone number"

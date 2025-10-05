@@ -357,12 +357,17 @@ class User {
   // Instance methods
   async save() {
     try {
-      // Store password in plain text (no hashing)
-      console.log("Saving user with plain text password:", {
+      // Hash password before saving
+      if (this.password && !this.password.startsWith("$2a$")) {
+        console.log("Hashing password before saving");
+        this.password = await bcrypt.hash(this.password, 12);
+      }
+
+      console.log("Saving user with hashed password:", {
         isNewUser: !this.id,
         hasPassword: !!this.password,
         passwordPreview: this.password
-          ? this.password.substring(0, 5) + "..."
+          ? this.password.substring(0, 10) + "..."
           : "No password",
       });
 

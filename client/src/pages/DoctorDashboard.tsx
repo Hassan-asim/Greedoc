@@ -180,8 +180,8 @@ export const DoctorDashboard: React.FC = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="card">
-            <div className="card-content">
-              <div className="flex items-center">
+            <div className="card-content flex items-center">
+              <div className="flex items-center h-full">
                 <div className="p-2 bg-primary-100 rounded-lg">
                   <FiUsers className="h-6 w-6 text-primary-600" />
                 </div>
@@ -266,7 +266,7 @@ export const DoctorDashboard: React.FC = () => {
                     <p className="text-gray-600 mb-4">Start by adding your first patient</p>
                     <button
                       onClick={() => setShowAddPatient(true)}
-                      className="btn btn-primary"
+                      className="btn btn-primary  py-2 px-4"
                     >
                       <FiPlus className="mr-2 h-4 w-4" />
                       Add First Patient
@@ -561,7 +561,7 @@ export const DoctorDashboard: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary"
+                  className="btn btn-primary   py-2 px-4"
                 >
                   Add Patient
                 </button>
@@ -647,7 +647,7 @@ export const DoctorDashboard: React.FC = () => {
                   setUploadedFile(null)
                 }}
                 disabled={!uploadedFile}
-                className="btn btn-primary disabled:opacity-50"
+                className="btn btn-primary   py-2 px-4 disabled:opacity-50"
               >
                 Upload Report
               </button>
@@ -730,7 +730,7 @@ export const DoctorDashboard: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleResetPassword(patientCredentials.id)}
-                className="btn btn-primary"
+                className="btn btn-primary   py-2 px-4"
               >
                 Reset Password
               </button>

@@ -15,6 +15,8 @@ import {
   FiX
 } from 'react-icons/fi'
 import toast from 'react-hot-toast'
+import { appointmentAPI, healthAPI } from '../services/api'
+import { useAuth } from '../contexts/AuthContext'
 
 interface Medication {
   id: string
@@ -85,10 +87,25 @@ const durationOptions = [
 ]
 
 export const PrescriptionModule: React.FC = () => {
+  const { user } = useAuth()
   const [prescription, setPrescription] = useState<Prescription>(mockPrescription)
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showAddMedication, setShowAddMedication] = useState(false)
+  const [showUploadReport, setShowUploadReport] = useState(false)
+  const [showHealthRecords, setShowHealthRecords] = useState(false)
+  const [showScheduleFollowup, setShowScheduleFollowup] = useState(false)
+  const [healthRecords, setHealthRecords] = useState<any[]>([])
+  const [loadingRecords, setLoadingRecords] = useState(false)
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [reportType, setReportType] = useState('')
+  const [reportNotes, setReportNotes] = useState('')
+  const [followupData, setFollowupData] = useState({
+    title: 'Follow-up Appointment',
+    date: '',
+    time: '',
+    notes: ''
+  })
   const [newMedication, setNewMedication] = useState<Partial<Medication>>({
     name: '',
     dosage: '',
@@ -157,9 +174,57 @@ export const PrescriptionModule: React.FC = () => {
     }
   }
 
-  const handleUploadReport = () => {
-    // Simulate file upload
-    toast.success('Report uploaded successfully!')
+  const handleUploadReport = async () => {
+    if (!uploadFile) {
+      toast.error('Please select a file')
+      return
+    }
+    try {
+      // In production, upload file to server
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      toast.success('Report uploaded successfully!')
+      setShowUploadReport(false)
+      setUploadFile(null)
+      setReportType('')
+      setReportNotes('')
+    } catch (error) {
+      toast.error('Failed to upload report')
+    }
+  }
+
+  const handleViewHealthRecords = async () => {
+    try {
+      setShowHealthRecords(true)
+      setLoadingRecords(true)
+      const res = await healthAPI.getRecords({ userId: prescription.patientId })
+      setHealthRecords(res.data.data.records || [])
+    } catch (e: any) {
+      toast.error('Failed to load health records')
+    } finally {
+      setLoadingRecords(false)
+    }
+  }
+
+  const handleScheduleFollowup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const dateTime = `${followupData.date}T${followupData.time}:00`
+      await appointmentAPI.createAppointment({
+        title: followupData.title,
+        date: dateTime,
+        provider: {
+          name: user?.firstName + ' ' + user?.lastName || 'Dr.',
+          type: 'doctor'
+        },
+        notes: followupData.notes,
+        userId: prescription.patientId
+      })
+      toast.success('Follow-up appointment scheduled!')
+      setShowScheduleFollowup(false)
+      setFollowupData({ title: 'Follow-up Appointment', date: '', time: '', notes: '' })
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to schedule follow-up')
+    }
   }
 
   return (
@@ -339,17 +404,17 @@ export const PrescriptionModule: React.FC = () => {
               <div className="card-content">
                 <div className="space-y-3">
                   <button
-                    onClick={handleUploadReport}
+                    onClick={() => setShowUploadReport(true)}
                     className="btn btn-outline btn-sm w-full justify-start"
                   >
                     <FiUpload className="mr-2 h-4 w-4" />
                     Upload Lab Report
                   </button>
-                  <button className="btn btn-outline btn-sm w-full justify-start">
+                  <button onClick={handleViewHealthRecords} className="btn btn-outline btn-sm w-full justify-start">
                     <FiFileText className="mr-2 h-4 w-4" />
                     View Health Records
                   </button>
-                  <button className="btn btn-outline btn-sm w-full justify-start">
+                  <button onClick={() => setShowScheduleFollowup(true)} className="btn btn-outline btn-sm w-full justify-start">
                     <FiCalendar className="mr-2 h-4 w-4" />
                     Schedule Follow-up
                   </button>
@@ -391,6 +456,109 @@ export const PrescriptionModule: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Upload Lab Report Modal */}
+      {showUploadReport && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold mb-4">Upload Lab Report for {prescription.patientName}</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm mb-1">Report Type</label>
+                <select className="input w-full" value={reportType} onChange={e => setReportType(e.target.value)}>
+                  <option value="">Select type</option>
+                  <option value="lab">Lab Report</option>
+                  <option value="imaging">Imaging Report</option>
+                  <option value="pathology">Pathology Report</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Report File</label>
+                <input type="file" className="input w-full" onChange={e => setUploadFile(e.target.files?.[0] || null)} />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Notes</label>
+                <textarea className="input w-full" rows={3} value={reportNotes} onChange={e => setReportNotes(e.target.value)} placeholder="Additional notes..." />
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <button className="btn btn-outline" onClick={() => setShowUploadReport(false)}>Cancel</button>
+                <button className="btn btn-primary" onClick={handleUploadReport}>Upload</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Health Records Modal */}
+      {showHealthRecords && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Health Records for {prescription.patientName}</h3>
+              <button className="btn btn-outline btn-sm" onClick={() => setShowHealthRecords(false)}>Close</button>
+            </div>
+            <div className="p-4 max-h-96 overflow-y-auto">
+              {loadingRecords ? (
+                <div className="text-center py-8 text-gray-500">Loading records...</div>
+              ) : healthRecords.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">No health records found.</div>
+              ) : (
+                <div className="space-y-3">
+                  {healthRecords.map((record: any) => (
+                    <div key={record.id} className="p-3 border rounded-lg">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="font-medium text-gray-900">{record.title || 'Untitled'}</div>
+                          <div className="text-sm text-gray-600">{record.recordType || 'general'}</div>
+                          {record.description && <div className="text-sm text-gray-500 mt-1">{record.description}</div>}
+                          <div className="text-xs text-gray-400 mt-1">{new Date(record.date).toLocaleDateString()}</div>
+                        </div>
+                        <span className={`badge ${record.recordType === 'appointment' ? 'badge-primary' : record.recordType === 'lab' ? 'badge-warning' : 'badge-secondary'}`}>
+                          {record.recordType}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule Follow-up Modal */}
+      {showScheduleFollowup && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold mb-4">Schedule Follow-up for {prescription.patientName}</h3>
+            <form onSubmit={handleScheduleFollowup} className="space-y-3">
+              <div>
+                <label className="block text-sm mb-1">Appointment Title</label>
+                <input required className="input w-full" value={followupData.title} onChange={e => setFollowupData({...followupData, title: e.target.value})} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm mb-1">Date</label>
+                  <input required type="date" className="input w-full" value={followupData.date} onChange={e => setFollowupData({...followupData, date: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Time</label>
+                  <input required type="time" className="input w-full" value={followupData.time} onChange={e => setFollowupData({...followupData, time: e.target.value})} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Notes</label>
+                <textarea className="input w-full" rows={3} value={followupData.notes} onChange={e => setFollowupData({...followupData, notes: e.target.value})} placeholder="Follow-up details..." />
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <button type="button" className="btn btn-outline" onClick={() => setShowScheduleFollowup(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Schedule</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Add Medication Modal */}
       {showAddMedication && (

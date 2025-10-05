@@ -47,9 +47,14 @@ app.use("/api/users", require("./routes/users"));
 app.use("/api/patients", require("./routes/patients"));
 app.use("/api/health", require("./routes/health"));
 app.use("/api/medications", require("./routes/medications"));
+app.use("/api/prescriptions", require("./routes/prescriptions"));
+app.use("/api/followups", require("./routes/followups"));
 app.use("/api/appointments", require("./routes/appointments"));
+app.use("/api/dashboard", require("./routes/dashboard"));
+app.use("/api/health-data", require("./routes/healthData"));
 app.use("/api/chat", require("./routes/chat"));
 app.use("/api/ai", require("./routes/ai"));
+app.use("/api/test", require("./routes/test-data"));
 
 // Health check endpoint
 app.get("/api/health-check", (req, res) => {

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import ReportUpload from '../components/ReportUpload'
 import { PatientCreationForm } from '../components/PatientCreationForm'
 import { useAuth } from '../contexts/AuthContext'
 import patientService from '../services/patientService'
+import { dashboardService, DashboardStats } from '../services/dashboardService'
 import { appointmentAPI, healthAPI } from '../services/api'
 import toast from 'react-hot-toast'
 import { 
@@ -45,16 +46,14 @@ export const DoctorDashboard: React.FC = () => {
   const [showUploadReport, setShowUploadReport] = useState(false)
   const [patients, setPatients] = useState<Patient[]>([])
   const [loading, setLoading] = useState(true)
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-  const [newPatient, setNewPatient] = useState({
-    firstName: '',
-    lastName: '',
-    cnic: '',
-    phone: '',
-    email: '',
-    dateOfBirth: '',
-    gender: 'male'
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
+    totalPatients: 0,
+    activePatients: 0,
+    pendingReports: 0,
+    todayAppointments: 0
   })
+  const [loadingStats, setLoadingStats] = useState(true)
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [showCredentials, setShowCredentials] = useState(false)
   const [patientCredentials, setPatientCredentials] = useState<any>(null)
   const [showScheduleAppointment, setShowScheduleAppointment] = useState(false)
@@ -71,6 +70,7 @@ export const DoctorDashboard: React.FC = () => {
   })
   
   const { user, isLoading: authLoading, token } = useAuth()
+  const navigate = useNavigate()
 
   // Debug authentication state
   useEffect(() => {
@@ -83,10 +83,11 @@ export const DoctorDashboard: React.FC = () => {
     })
   }, [user, authLoading, token])
 
-  // Load patients from database only when user is authenticated
+  // Load patients and dashboard stats from database only when user is authenticated
   useEffect(() => {
     if (user && !authLoading) {
       loadPatients()
+      loadDashboardStats()
     }
   }, [user, authLoading])
 
@@ -105,6 +106,39 @@ export const DoctorDashboard: React.FC = () => {
       setPatients([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadDashboardStats = async () => {
+    if (!user?.id) return
+    
+    try {
+      setLoadingStats(true)
+      console.log('Loading dashboard stats for doctor:', {
+        userId: user.id,
+        userRole: user.role,
+        userEmail: user.email
+      })
+      const stats = await dashboardService.getDashboardStats(user.id)
+      console.log('Loaded dashboard stats:', stats)
+      setDashboardStats(stats)
+    } catch (error) {
+      console.error('Error loading dashboard stats:', error)
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      })
+      toast.error('Failed to load dashboard statistics')
+      // Set default stats on error
+      setDashboardStats({
+        totalPatients: 0,
+        activePatients: 0,
+        pendingReports: 0,
+        todayAppointments: 0
+      })
+    } finally {
+      setLoadingStats(false)
     }
   }
 
@@ -130,44 +164,6 @@ export const DoctorDashboard: React.FC = () => {
     }
   }
 
-  const handleAddPatient = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-      const patientData = {
-        firstName: newPatient.firstName,
-        lastName: newPatient.lastName,
-        email: newPatient.email,
-        phoneNumber: newPatient.phone,
-        cnic: newPatient.cnic,
-        dateOfBirth: newPatient.dateOfBirth,
-        gender: newPatient.gender
-      }
-      
-      const response = await patientService.createPatient(patientData)
-      toast.success('Patient created successfully!')
-      
-      // Show credentials modal
-      setPatientCredentials(response)
-      setShowCredentials(true)
-      
-      // Reset form
-      setNewPatient({
-        firstName: '',
-        lastName: '',
-        cnic: '',
-        phone: '',
-        email: '',
-        dateOfBirth: '',
-        gender: 'male'
-      })
-      setShowAddPatient(false)
-      // Reload patients
-      loadPatients()
-    } catch (error) {
-      console.error('Error adding patient:', error)
-      toast.error('Failed to create patient')
-    }
-  }
 
   const handleScheduleAppointment = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -212,12 +208,8 @@ export const DoctorDashboard: React.FC = () => {
     patient.email?.toLowerCase().includes(searchTerm.toLowerCase())
   ) : []
 
-  const stats = {
-    totalPatients: Array.isArray(patients) ? patients.length : 0,
-    activePatients: Array.isArray(patients) ? patients.filter(p => p.status === 'active').length : 0,
-    pendingReports: 5,
-    todayAppointments: 3
-  }
+  // Use real dashboard stats from Firebase
+  const stats = dashboardStats
 
   // Show loading while authentication is being verified
   if (authLoading) {
@@ -254,6 +246,18 @@ export const DoctorDashboard: React.FC = () => {
               <h1 className="ml-2 text-2xl font-bold text-gray-900">Doctor Portal</h1>
             </div>
             <div className="flex items-center space-x-4">
+              <button
+                onClick={() => {
+                  loadPatients()
+                  loadDashboardStats()
+                  toast.success('Dashboard refreshed!')
+                }}
+                className="btn btn-outline btn-md inline-flex items-center"
+                disabled={loadingStats}
+              >
+                <FiClock className="mr-2 h-4 w-4" />
+                {loadingStats ? 'Refreshing...' : 'Refresh'}
+              </button>
               <Link
                 to="/doctor/chat"
                 className="btn btn-outline btn-md inline-flex items-center"
@@ -290,7 +294,11 @@ export const DoctorDashboard: React.FC = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Patients</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalPatients}</p>
+                  {loadingStats ? (
+                    <div className="animate-pulse bg-gray-200 h-8 w-16 rounded"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900">{stats.totalPatients}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -304,7 +312,11 @@ export const DoctorDashboard: React.FC = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Active Patients</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.activePatients}</p>
+                  {loadingStats ? (
+                    <div className="animate-pulse bg-gray-200 h-8 w-16 rounded"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900">{stats.activePatients}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -317,8 +329,12 @@ export const DoctorDashboard: React.FC = () => {
                   <FiFileText className="h-6 w-6 text-warning-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Pending Reports</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.pendingReports}</p>
+                  <p className="text-sm font-medium text-gray-600">Pending Follow-ups</p>
+                  {loadingStats ? (
+                    <div className="animate-pulse bg-gray-200 h-8 w-16 rounded"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900">{stats.pendingReports}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -331,8 +347,12 @@ export const DoctorDashboard: React.FC = () => {
                   <FiCalendar className="h-6 w-6 text-primary-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Today's Appointments</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.todayAppointments}</p>
+                  <p className="text-sm font-medium text-gray-600">Today's Follow-ups</p>
+                  {loadingStats ? (
+                    <div className="animate-pulse bg-gray-200 h-8 w-16 rounded"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900">{stats.todayAppointments}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -480,10 +500,13 @@ export const DoctorDashboard: React.FC = () => {
                     <div>
                       <h4 className="font-medium text-gray-900 mb-3">Quick Actions</h4>
                       <div className="space-y-2">
-                        <Link to="/prescription" className="btn btn-outline btn-sm w-full justify-start">
+                        <button 
+                          onClick={() => navigate('/prescription', { state: { patient: selectedPatient } })}
+                          className="btn btn-outline btn-sm w-full justify-start"
+                        >
                           <FiPackage className="mr-2 h-4 w-4" />
                           Manage Medications
-                        </Link>
+                        </button>
                         <button 
                           onClick={() => setShowUploadReport(true)}
                           className="btn btn-outline btn-sm w-full justify-start"
@@ -550,133 +573,13 @@ export const DoctorDashboard: React.FC = () => {
       {/* Add Patient Modal */}
       {showAddPatient && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Patient</h3>
-            
-            <form onSubmit={handleAddPatient} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newPatient.firstName}
-                    onChange={(e) => setNewPatient({...newPatient, firstName: e.target.value})}
-                    className="input w-full"
-                    placeholder="Enter first name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newPatient.lastName}
-                    onChange={(e) => setNewPatient({...newPatient, lastName: e.target.value})}
-                    className="input w-full"
-                    placeholder="Enter last name"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  CNIC
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newPatient.cnic}
-                  onChange={(e) => setNewPatient({...newPatient, cnic: e.target.value})}
-                  className="input w-full"
-                  placeholder="12345-1234567-1"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={newPatient.phone}
-                  onChange={(e) => setNewPatient({...newPatient, phone: e.target.value})}
-                  className="input w-full"
-                  placeholder="+92 300 1234567"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={newPatient.email}
-                  onChange={(e) => setNewPatient({...newPatient, email: e.target.value})}
-                  className="input w-full"
-                  placeholder="patient@example.com"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date of Birth
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={newPatient.dateOfBirth}
-                    onChange={(e) => setNewPatient({...newPatient, dateOfBirth: e.target.value})}
-                    className="input w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Gender
-                  </label>
-                  <select
-                    value={newPatient.gender}
-                    onChange={(e) => setNewPatient({...newPatient, gender: e.target.value})}
-                    className="input w-full"
-                  >
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowAddPatient(false)}
-                  className="btn btn-outline"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary   py-2 px-4"
-                >
-                  Add Patient
-                </button>
-              </div>
-            </form>
-          </div>
           <PatientCreationForm
             onPatientCreated={(patient, credentials) => {
               setPatientCredentials(credentials)
               setShowCredentials(true)
               setShowAddPatient(false)
               loadPatients()
+              loadDashboardStats() // Refresh dashboard stats
             }}
             onClose={() => setShowAddPatient(false)}
           />

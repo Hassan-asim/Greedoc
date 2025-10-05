@@ -60,7 +60,7 @@ if (process.env.HEALTH_AGENT_ENABLED === "true") {
 }
 
 // Start Notification Agent
-const notificationAgent = require('./services/notificationAgent');
+const notificationAgent = require("./services/notificationAgent");
 notificationAgent.start();
 
 // Routes
@@ -69,7 +69,11 @@ app.use("/api/users", require("./routes/users"));
 app.use("/api/patients", require("./routes/patients"));
 app.use("/api/health", require("./routes/health"));
 app.use("/api/medications", require("./routes/medications"));
+app.use("/api/prescriptions", require("./routes/prescriptions"));
+app.use("/api/followups", require("./routes/followups"));
 app.use("/api/appointments", require("./routes/appointments"));
+app.use("/api/dashboard", require("./routes/dashboard"));
+app.use("/api/health-data", require("./routes/healthData"));
 app.use("/api/ai", require("./routes/ai"));
 app.use("/api/events", require("./routes/events"));
 app.use("/api/notifications", require("./routes/notifications"));
@@ -89,6 +93,7 @@ app.get("/api", (req, res) => {
       patients: "/api/patients",
       health: "/api/health",
       medications: "/api/medications",
+      prescriptions: "/api/prescriptions",
       appointments: "/api/appointments",
       ai: "/api/ai",
       chat: "/api/chat",

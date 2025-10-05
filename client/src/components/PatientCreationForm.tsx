@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { FiUser, FiMail, FiPhone, FiCalendar, FiEye, FiEyeOff } from 'react-icons/fi'
+import { FiUser, FiMail, FiPhone, FiCalendar, FiEye, FiEyeOff, FiCreditCard } from 'react-icons/fi'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 
@@ -9,6 +9,7 @@ interface PatientFormData {
   lastName: string
   email: string
   phoneNumber: string
+  cnic: string
   dateOfBirth: string
   gender: string
   password?: string
@@ -210,6 +211,30 @@ export const PatientCreationForm: React.FC<PatientCreationFormProps> = ({
           </div>
           {errors.phoneNumber && (
             <p className="mt-1 text-sm text-red-500">{errors.phoneNumber.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="cnic" className="block text-sm font-medium text-gray-700">
+            CNIC *
+          </label>
+          <div className="mt-1 relative">
+            <input
+              {...register('cnic', { 
+                required: 'CNIC is required',
+                pattern: {
+                  value: /^\d{5}-\d{7}-\d{1}$/,
+                  message: 'CNIC must be in format 12345-1234567-1'
+                }
+              })}
+              type="text"
+              className="input w-full"
+              placeholder="12345-1234567-1"
+            />
+            <FiCreditCard className="absolute right-3 top-3 h-5 w-5 text-gray-400" />
+          </div>
+          {errors.cnic && (
+            <p className="mt-1 text-sm text-red-500">{errors.cnic.message}</p>
           )}
         </div>
 

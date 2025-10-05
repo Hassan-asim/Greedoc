@@ -7,9 +7,7 @@ import {
   FiPackage, 
   FiCalendar, 
   FiTrendingUp, 
-  FiAlertCircle,
   FiCheckCircle,
-  FiClock,
   FiActivity
 } from 'react-icons/fi'
 

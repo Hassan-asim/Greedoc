@@ -1,194 +1,64 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { useAuth } from '../contexts/AuthContext'
-import { ThemeToggle } from '../components/ThemeToggle'
-import { 
-  FiHeart, 
-  FiShield, 
-  FiZap, 
-  FiTrendingUp, 
-  FiUsers, 
-  FiSmartphone,
-  FiArrowRight,
-  FiCheck,
-  FiPackage,
-  FiCalendar
-} from 'react-icons/fi'
+import Navbar from "@/components/Navbar"
+import { FiCheck, FiHeart, FiSmartphone, FiUsers } from 'react-icons/fi'
+import { Link } from "react-router-dom";
 
 export const Home: React.FC = () => {
-  const { user } = useAuth()
-
-  const features = [
-    {
-      icon: FiHeart,
-      title: 'Digital Health Twin',
-      description: 'Create your AI-powered digital health twin that learns and predicts your health patterns.'
-    },
-    {
-      icon: FiPackage,
-      title: 'Smart Medication Management',
-      description: 'AI agents automatically manage your medications and send intelligent reminders.'
-    },
-    {
-      icon: FiCalendar,
-      title: 'Automated Scheduling',
-      description: 'AI agents schedule appointments and manage your health calendar automatically.'
-    },
-    {
-      icon: FiZap,
-      title: 'Virtual Doctor Chatbot',
-      description: 'Chat with AI-powered virtual doctor for instant medical advice and symptom analysis.'
-    },
-    {
-      icon: FiShield,
-      title: 'Proactive Risk Prediction',
-      description: 'Predict health risks before they become problems with advanced AI algorithms.'
-    },
-    {
-      icon: FiTrendingUp,
-      title: 'Health Analytics',
-      description: 'Comprehensive health insights from wearables, lab reports, and manual inputs.'
-    }
-  ]
-
   const benefits = [
-    'Personalized health recommendations',
-    'Medication adherence tracking',
-    'AI-powered symptom analysis',
-    'Secure health data storage',
-    'Comprehensive health reports',
-    '24/7 health monitoring'
-  ]
+    "AI-powered health insights",
+    "Secure data encryption",
+    "24/7 health monitoring",
+    "Personalized recommendations",
+    "Multi-device synchronization"
+  ];
+
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <FiHeart className="h-8 w-8 text-primary-600" />
-              <h1 className="ml-2 text-2xl font-bold text-gray-900">Greedoc</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <ThemeToggle />
-              {user ? (
-                <Link
-                  to="/app/dashboard"
-                  className="btn btn-primary btn-md"
-                >
-                  Go to Dashboard
-                </Link>
-              ) : (
-                <>
-                  <Link
-                    to="/doctor/login"
-                    className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                  >
-                    Doctor Portal
-                  </Link>
-                  <Link
-                    to="/patient/login"
-                    className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                  >
-                    Patient Portal
-                  </Link>
-                </>
-              )}
+    <>
+      <div className="min-h-screen h-screen relative">
+        {/* Background image for the hero section */}
+
+        <section className="h-full relative">
+          <div className="absolute top-0 left-0 w-full z-20 pt-3">
+            <Navbar />
+          </div>
+          <div
+            className="max-w-7xl mx-auto px-4 xl:px-0 grid lg:grid-cols-2 lg:gap-x-20 xl:gap-x-40 pt-24 lg:pt-28 h-full items-center"
+          >
+            <div className="lg:block hidden"></div>
+            <div className="flex flex-col items-start lg:items-start items-center text-center lg:text-left lg:mt-0 justify-center h-full lg:h-auto">
+              <div
+                className="items-center justify-center rounded-full text-sm font-medium whitespace-nowrap shadow-[0_2px_10px_0px_rgba(0,0,0,0.15)] inline-flex bg-green-900 text-white px-2.5 py-1"
+              >
+                Introducing  Health Twin App
+              </div>
+              <div
+                className="text-3xl font-semibold text-white text-slate-700 lg:text-5xl mt-3 lg:mt-4 lg:leading-tight"
+              >
+                Everything You Need for Better Health
+              </div>
+              <p
+                className="mt-3 text-sm font-medium lg:text-slate-600 sm:w-2/3 md:w-11/12 lg:mt-4 xl:w-3/4"
+              >
+                Our comprehensive platform combines cutting-edge AI with user-friendly design
+                to help you manage your health effectively.
+              </p>
             </div>
           </div>
-        </div>
-      </header>
+          <img
+            className="absolute left-0 top-0 h-full w-full object-cover lg:w-1/2 -z-10"
+            src="https://tailkits.com/ui/iframe/assets/img/bg-10.png"
+            alt="Features"
+          />
+          {/* Mobile overlay for better text readability */}
+          <div className="absolute inset-0 bg-black/20 lg:bg-transparent lg:w-1/2 -z-5"></div>
+        </section>
+      </div>
 
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-primary-50 to-primary-100 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <motion.h1 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              className="text-4xl md:text-6xl font-bold text-gray-900 mb-6"
-            >
-              Health Twin App
-              <span className="text-primary-500"> - Your Digital Health Twin</span>
-            </motion.h1>
-            <motion.p 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto"
-            >
-              Shift from reactive to proactive healthcare with AI-powered health management. 
-              Create your digital health twin, predict risks, and automate health tasks 
-              with intelligent AI agents and virtual doctors.
-            </motion.p>
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center"
-            >
-              <Link
-                to="/doctor/login"
-                className="btn btn-primary btn-lg inline-flex items-center hover:scale-105 transition-transform"
-              >
-                Doctor Portal
-                <FiArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-              <Link
-                to="/patient/login"
-                className="btn btn-outline btn-lg hover:scale-105 transition-transform"
-              >
-                Patient Portal
-              </Link>
-            </motion.div>
-          </div>
-        </div>
-      </section>
 
-      {/* Features Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Everything You Need for Better Health
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Our comprehensive platform combines cutting-edge AI with user-friendly design 
-              to help you manage your health effectively.
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <motion.div 
-                key={index} 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="card p-6 hover:shadow-lg transition-all hover:scale-105"
-              >
-                <div className="flex items-center mb-4">
-                  <div className="flex-shrink-0">
-                    <feature.icon className="h-8 w-8 text-primary-600" />
-                  </div>
-                  <h3 className="ml-3 text-lg font-semibold text-gray-900">
-                    {feature.title}
-                  </h3>
-                </div>
-                <p className="text-gray-600">
-                  {feature.description}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* Benefits Section */}
-      <section className="py-20 bg-gray-50">
+
+
+      <section className="py-20 ">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
@@ -196,7 +66,7 @@ export const Home: React.FC = () => {
                 Why Choose Greedoc?
               </h2>
               <p className="text-xl text-gray-600 mb-8">
-                Join thousands of users who have transformed their health management 
+                Join thousands of users who have transformed their health management
                 with our AI-powered platform.
               </p>
               <div className="space-y-4">
@@ -208,7 +78,7 @@ export const Home: React.FC = () => {
                 ))}
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow-lg p-8">
+            <div className="bg-white rounded-xl py-16 shadow-2xl p-8">
               <div className="text-center">
                 <FiSmartphone className="h-16 w-16 text-primary-600 mx-auto mb-4" />
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">
@@ -237,27 +107,30 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Portal Access Section */}
-      <section className="py-20 bg-primary-600">
+
+<section
+  className="py-20 bg-cover bg-center bg-no-repeat"
+  style={{ backgroundImage: "url('https://tailkits.com/ui/iframe/assets/img/bg-10.png')" }}
+>        
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-4">
             Ready to Transform Healthcare?
           </h2>
-          <p className="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
+          <p className="text-xl text-slate-700 mb-8 max-w-2xl mx-auto">
             Choose your portal to access Greedoc's AI-powered health management platform.
           </p>
-          
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
               to="/doctor/login"
-              className="btn bg-white text-primary-600 hover:bg-gray-100 btn-lg inline-flex items-center w-full sm:w-auto"
+              className="btn bg-white border-green-800 border text-primary-600 hover:bg-gray-100 btn-lg inline-flex items-center w-full sm:w-auto"
             >
               <FiUsers className="mr-2 h-5 w-5" />
               Doctor Portal
             </Link>
             <Link
               to="/patient/login"
-              className="btn bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 btn-lg inline-flex items-center w-full sm:w-auto"
+              className="btn bg-green-800 border-2 border-white text-white hover:bg-green-600 hover:text-white btn-lg inline-flex items-center w-full sm:w-auto"
             >
               <FiHeart className="mr-2 h-5 w-5" />
               Patient Portal
@@ -266,8 +139,306 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
+
+      <section className="pt-12 lg:pt-16 pb-6 lg:pb-16">
+        <div className="max-w-7xl mx-auto px-4 xl:px-0">
+          <div className="flex flex-col items-start md:px-4 lg:items-start lg:px-8">
+            <div
+              className="items-center justify-center rounded-full text-sm font-medium whitespace-nowrap shadow-[0_2px_10px_0px_rgba(0,0,0,0.15)] inline-flex bg-green-900 text-white px-2.5 py-1"
+            >
+              Frequently Asked Questions
+            </div>
+            <div
+              className="mt-8 bg-gradient-to-b from-slate-800 to-slate-600 bg-clip-text text-3xl font-semibold text-transparent sm:w-2/3 md:w-1/2 lg:mt-9 lg:text-4xl lg:leading-tight xl:w-2/3"
+            >
+              Everything You Need to Know About Greedoc
+            </div>
+            <p
+              className="text-sm font-medium text-slate-600 leading-normal lg:leading-normal lg:text-base mt-4 sm:w-2/3 md:w-1/2 xl:w-2/5"
+            >
+              Get answers to common questions about our AI-powered health management platform
+              and discover how Greedoc can transform your healthcare experience.
+            </p>
+          </div>
+          <div className="mt-4 border-b border-b-neutral-100 lg:mt-6"></div>
+          <div className="mt-6 space-y-0.5 md:px-4 lg:mt-9 lg:px-8">
+            <details
+              className="group open:bg-slate-50 divide-y divide-neutral-100 focus:shadow-[0_0px_2px_0px_rgba(0,0,0,0.10)] open:mt-3 open:rounded-2xl hover:rounded-2xl"
+            >
+              <summary
+                className="group/question flex cursor-pointer hover:opacity-90 transition-all items-center justify-between gap-x-4 rounded-t-2xl p-4"
+              >
+                <div className="font-semibold text-neutral-700 md:text-lg xl:text-xl">
+                  What is Greedoc and how does it work?
+                </div>
+                <figure
+                  className="hidden shrink-0 items-center gap-x-3 whitespace-nowrap rounded-full bg-slate-200 py-1.5 pl-3 pr-1.5 text-sm text-slate-600 transition-all group-open:flex"
+                >
+                  Collapse
+                  <svg
+                    className="h-5 text-slate-600"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    data-slot="icon"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.25 12a.75.75 0 0 1 .75-.75h14a.75.75 0 0 1 0 1.5H5a.75.75 0 0 1-.75-.75Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </figure>
+                <figure
+                  className="flex shrink-0 items-center justify-center transition-all rounded-full bg-slate-200 p-1.5 shadow-[0_2px_10px_0px_rgba(0,0,0,0.05)] group-open:hidden"
+                >
+                  <svg
+                    className="h-5 text-slate-600"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    data-slot="icon"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </figure>
+              </summary>
+              <p className="text-neutral-500 px-4 pb-4">
+                Greedoc is an AI-powered health management platform that provides comprehensive 
+                healthcare solutions for both patients and doctors. Our platform uses advanced 
+                artificial intelligence to analyze health data, provide personalized insights, 
+                and facilitate better communication between healthcare providers and patients.
+              </p>
+            </details>
+            <details
+              className="group open:bg-slate-50 divide-y divide-neutral-100 focus:shadow-[0_0px_2px_0px_rgba(0,0,0,0.10)] open:mt-3 open:rounded-2xl hover:rounded-2xl"
+            >
+              <summary
+                className="group/question flex cursor-pointer hover:opacity-90 transition-all items-center justify-between gap-x-4 rounded-t-2xl p-4"
+              >
+                <div className="font-semibold text-neutral-700 md:text-lg xl:text-xl">
+                  Is my health data secure on Greedoc?
+                </div>
+                <figure
+                  className="hidden shrink-0 items-center gap-x-3 whitespace-nowrap rounded-full bg-slate-200 py-1.5 pl-3 pr-1.5 text-sm text-slate-600 transition-all group-open:flex"
+                >
+                  Collapse
+                  <svg
+                    className="h-5 text-slate-600"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    data-slot="icon"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.25 12a.75.75 0 0 1 .75-.75h14a.75.75 0 0 1 0 1.5H5a.75.75 0 0 1-.75-.75Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </figure>
+                <figure
+                  className="flex shrink-0 items-center justify-center transition-all rounded-full bg-slate-200 p-1.5 shadow-[0_2px_10px_0px_rgba(0,0,0,0.05)] group-open:hidden"
+                >
+                  <svg
+                    className="h-5 text-slate-600"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    data-slot="icon"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </figure>
+              </summary>
+              <p className="text-neutral-500 px-4 pb-4">
+                Absolutely! We take data security very seriously at Greedoc. All health data 
+                is encrypted using industry-standard encryption protocols, and we comply with 
+                HIPAA regulations. Your personal health information is stored securely and 
+                is only accessible to authorized healthcare providers with your consent.
+              </p>
+            </details>
+            <details
+              className="group open:bg-slate-50 divide-y divide-neutral-100 focus:shadow-[0_0px_2px_0px_rgba(0,0,0,0.10)] open:mt-3 open:rounded-2xl hover:rounded-2xl"
+            >
+              <summary
+                className="group/question flex cursor-pointer hover:opacity-90 transition-all items-center justify-between gap-x-4 rounded-t-2xl p-4"
+              >
+                <div className="font-semibold text-neutral-700 md:text-lg xl:text-xl">
+                  How do I connect with doctors on Greedoc?
+                </div>
+                <figure
+                  className="hidden shrink-0 items-center gap-x-3 whitespace-nowrap rounded-full bg-slate-200 py-1.5 pl-3 pr-1.5 text-sm text-slate-600 transition-all group-open:flex"
+                >
+                  Collapse
+                  <svg
+                    className="h-5 text-slate-600"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    data-slot="icon"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.25 12a.75.75 0 0 1 .75-.75h14a.75.75 0 0 1 0 1.5H5a.75.75 0 0 1-.75-.75Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </figure>
+                <figure
+                  className="flex shrink-0 items-center justify-center transition-all rounded-full bg-slate-200 p-1.5 shadow-[0_2px_10px_0px_rgba(0,0,0,0.05)] group-open:hidden"
+                >
+                  <svg
+                    className="h-5 text-slate-600"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    data-slot="icon"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </figure>
+              </summary>
+              <p className="text-neutral-500 px-4 pb-4">
+                Connecting with doctors on Greedoc is simple. Create your patient account, 
+                browse our network of verified healthcare professionals, and book appointments 
+                directly through the platform. You can also share your health data and receive 
+                AI-powered insights that help doctors provide more personalized care.
+              </p>
+            </details>
+            <details
+              className="group open:bg-slate-50 divide-y divide-neutral-100 focus:shadow-[0_0px_2px_0px_rgba(0,0,0,0.10)] open:mt-3 open:rounded-2xl hover:rounded-2xl"
+            >
+              <summary
+                className="group/question flex cursor-pointer hover:opacity-90 transition-all items-center justify-between gap-x-4 rounded-t-2xl p-4"
+              >
+                <div className="font-semibold text-neutral-700 md:text-lg xl:text-xl">
+                  What devices can I use to access Greedoc?
+                </div>
+                <figure
+                  className="hidden shrink-0 items-center gap-x-3 whitespace-nowrap rounded-full bg-slate-200 py-1.5 pl-3 pr-1.5 text-sm text-slate-600 transition-all group-open:flex"
+                >
+                  Collapse
+                  <svg
+                    className="h-5 text-slate-600"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    data-slot="icon"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.25 12a.75.75 0 0 1 .75-.75h14a.75.75 0 0 1 0 1.5H5a.75.75 0 0 1-.75-.75Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </figure>
+                <figure
+                  className="flex shrink-0 items-center justify-center transition-all rounded-full bg-slate-200 p-1.5 shadow-[0_2px_10px_0px_rgba(0,0,0,0.05)] group-open:hidden"
+                >
+                  <svg
+                    className="h-5 text-slate-600"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    data-slot="icon"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </figure>
+              </summary>
+              <p className="text-neutral-500 px-4 pb-4">
+                Greedoc is fully responsive and works seamlessly across all devices. 
+                You can access the platform from your smartphone, tablet, laptop, or desktop computer 
+                through our web application. We also have dedicated mobile apps for iOS and Android 
+                for the best mobile experience.
+              </p>
+            </details>
+            <details
+              className="group open:bg-slate-50 divide-y divide-neutral-100 focus:shadow-[0_0px_2px_0px_rgba(0,0,0,0.10)] open:mt-3 open:rounded-2xl hover:rounded-2xl"
+            >
+              <summary
+                className="group/question flex cursor-pointer hover:opacity-90 transition-all items-center justify-between gap-x-4 rounded-t-2xl p-4"
+              >
+                <div className="font-semibold text-neutral-700 md:text-lg xl:text-xl">
+                  How much does Greedoc cost?
+                </div>
+                <figure
+                  className="hidden shrink-0 items-center gap-x-3 whitespace-nowrap rounded-full bg-slate-200 py-1.5 pl-3 pr-1.5 text-sm text-slate-600 transition-all group-open:flex"
+                >
+                  Collapse
+                  <svg
+                    className="h-5 text-slate-600"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    data-slot="icon"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.25 12a.75.75 0 0 1 .75-.75h14a.75.75 0 0 1 0 1.5H5a.75.75 0 0 1-.75-.75Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </figure>
+                <figure
+                  className="flex shrink-0 items-center justify-center transition-all rounded-full bg-slate-200 p-1.5 shadow-[0_2px_10px_0px_rgba(0,0,0,0.05)] group-open:hidden"
+                >
+                  <svg
+                    className="h-5 text-slate-600"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    data-slot="icon"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </figure>
+              </summary>
+              <p className="text-neutral-500 px-4 pb-4">
+                Greedoc offers flexible pricing plans to suit different needs. We have a free basic plan 
+                for individual users, premium plans for families and healthcare professionals, and 
+                enterprise solutions for healthcare institutions. Visit our pricing page to see detailed 
+                information about all available plans and features.
+              </p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+
+
+      <footer  className="bg-green-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
@@ -275,13 +446,13 @@ export const Home: React.FC = () => {
                 <FiHeart className="h-6 w-6 text-primary-400" />
                 <h3 className="ml-2 text-lg font-bold">Greedoc</h3>
               </div>
-              <p className="text-gray-400">
+              <p className="text-gray-200">
                 Your AI-powered health companion for better wellness management.
               </p>
             </div>
             <div>
               <h4 className="text-lg font-semibold mb-4">Product</h4>
-              <ul className="space-y-2 text-gray-400">
+              <ul className="space-y-2 text-gray-200">
                 <li><a href="#" className="hover:text-white">Features</a></li>
                 <li><a href="#" className="hover:text-white">Pricing</a></li>
                 <li><a href="#" className="hover:text-white">Security</a></li>
@@ -289,7 +460,7 @@ export const Home: React.FC = () => {
             </div>
             <div>
               <h4 className="text-lg font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-gray-400">
+              <ul className="space-y-2 text-gray-200">
                 <li><a href="#" className="hover:text-white">Help Center</a></li>
                 <li><a href="#" className="hover:text-white">Contact Us</a></li>
                 <li><a href="#" className="hover:text-white">Privacy Policy</a></li>
@@ -297,18 +468,18 @@ export const Home: React.FC = () => {
             </div>
             <div>
               <h4 className="text-lg font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-gray-400">
+              <ul className="space-y-2 text-gray-200">
                 <li><a href="#" className="hover:text-white">About</a></li>
                 <li><a href="#" className="hover:text-white">Blog</a></li>
                 <li><a href="#" className="hover:text-white">Careers</a></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 Greedoc. All rights reserved.</p>
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-200">
+            <p>&copy; 2025 Greedoc. All rights reserved.</p>
           </div>
         </div>
       </footer>
-    </div>
+    </>
   )
 }

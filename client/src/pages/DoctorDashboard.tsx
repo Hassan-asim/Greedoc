@@ -233,8 +233,8 @@ export const DoctorDashboard: React.FC = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="card">
-            <div className="card-content">
-              <div className="flex items-center">
+            <div className="card-content flex items-center">
+              <div className="flex items-center h-full">
                 <div className="p-2 bg-primary-100 rounded-lg">
                   <FiUsers className="h-6 w-6 text-primary-600" />
                 </div>
@@ -319,7 +319,7 @@ export const DoctorDashboard: React.FC = () => {
                     <p className="text-gray-600 mb-4">Start by adding your first patient</p>
                     <button
                       onClick={() => setShowAddPatient(true)}
-                      className="btn btn-primary"
+                      className="btn btn-primary  py-2 px-4"
                     >
                       <FiPlus className="mr-2 h-4 w-4" />
                       Add First Patient
@@ -500,6 +500,127 @@ export const DoctorDashboard: React.FC = () => {
       {/* Add Patient Modal */}
       {showAddPatient && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Patient</h3>
+            
+            <form onSubmit={handleAddPatient} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    First Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newPatient.firstName}
+                    onChange={(e) => setNewPatient({...newPatient, firstName: e.target.value})}
+                    className="input w-full"
+                    placeholder="Enter first name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Last Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newPatient.lastName}
+                    onChange={(e) => setNewPatient({...newPatient, lastName: e.target.value})}
+                    className="input w-full"
+                    placeholder="Enter last name"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  CNIC
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newPatient.cnic}
+                  onChange={(e) => setNewPatient({...newPatient, cnic: e.target.value})}
+                  className="input w-full"
+                  placeholder="12345-1234567-1"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  required
+                  value={newPatient.phone}
+                  onChange={(e) => setNewPatient({...newPatient, phone: e.target.value})}
+                  className="input w-full"
+                  placeholder="+92 300 1234567"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={newPatient.email}
+                  onChange={(e) => setNewPatient({...newPatient, email: e.target.value})}
+                  className="input w-full"
+                  placeholder="patient@example.com"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date of Birth
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={newPatient.dateOfBirth}
+                    onChange={(e) => setNewPatient({...newPatient, dateOfBirth: e.target.value})}
+                    className="input w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Gender
+                  </label>
+                  <select
+                    value={newPatient.gender}
+                    onChange={(e) => setNewPatient({...newPatient, gender: e.target.value})}
+                    className="input w-full"
+                  >
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAddPatient(false)}
+                  className="btn btn-outline"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary   py-2 px-4"
+                >
+                  Add Patient
+                </button>
+              </div>
+            </form>
+          </div>
           <PatientCreationForm
             onPatientCreated={(patient, credentials) => {
               setPatientCredentials(credentials)
@@ -588,7 +709,7 @@ export const DoctorDashboard: React.FC = () => {
                   setUploadedFile(null)
                 }}
                 disabled={!uploadedFile}
-                className="btn btn-primary disabled:opacity-50"
+                className="btn btn-primary   py-2 px-4 disabled:opacity-50"
               >
                 Upload Report
               </button>
@@ -671,7 +792,7 @@ export const DoctorDashboard: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleResetPassword(patientCredentials.id)}
-                className="btn btn-primary"
+                className="btn btn-primary   py-2 px-4"
               >
                 Reset Password
               </button>

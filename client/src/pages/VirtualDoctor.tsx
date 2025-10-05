@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { FiSend, FiZap, FiUser, FiMessageCircle, FiArrowLeft, FiHeart } from 'react-icons/fi'
 import aiService from '../services/aiService'
+import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 
 interface Message {
@@ -37,6 +38,7 @@ const mockDoctorResponses = {
 }
 
 export const VirtualDoctor: React.FC = () => {
+  const { user } = useAuth()
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -65,6 +67,29 @@ export const VirtualDoctor: React.FC = () => {
     }, 1500)
   }
 
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const history = await aiService.getVirtualDoctorHistory(user?._id)
+        if (history && Array.isArray(history) && history.length > 0) {
+          const converted = history.map((h: any, idx: number) => ({
+            id: h.id || `${idx}`,
+            text: h.message,
+            sender: h.sender === 'assistant' ? 'doctor' : 'user',
+            timestamp: new Date(h.createdAt)
+          }))
+          setMessages(prev => {
+            // Avoid duplicating initial welcome if history exists
+            return converted
+          })
+        }
+      } catch (e) {
+        // ignore history errors
+      }
+    }
+    loadHistory()
+  }, [user?._id])
+
   const sendMessage = async (text: string, action?: string) => {
     if (!text.trim()) return
 
@@ -80,7 +105,7 @@ export const VirtualDoctor: React.FC = () => {
 
     try {
       // Get AI response from the backend
-      const response = await aiService.chatWithVirtualDoctor(text, { action }, 'virtual_doctor')
+      const response = await aiService.chatWithVirtualDoctor(text, { action }, user?._id)
       
       const doctorMessage: Message = {
         id: (Date.now() + 1).toString(),

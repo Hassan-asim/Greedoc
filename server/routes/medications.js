@@ -82,6 +82,20 @@ router.post('/', authenticateToken, [
     const medication = new Medication(medicationData);
     await medication.save();
 
+    // Notification for newly added medication
+    try {
+      const { db } = require('../config/firebase');
+      await db.collection('notifications').add({
+        userId: req.user._id,
+        title: 'New medication added',
+        body: `${req.body.name} has been added to your regimen`,
+        kind: 'medication_add',
+        data: { medicationId: medication.id || null },
+        isRead: false,
+        createdAt: new Date()
+      });
+    } catch (_) {}
+
     res.status(201).json({
       status: 'success',
       message: 'Medication added successfully',

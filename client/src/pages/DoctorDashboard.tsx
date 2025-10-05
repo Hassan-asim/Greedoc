@@ -4,6 +4,7 @@ import ReportUpload from '../components/ReportUpload'
 import { PatientCreationForm } from '../components/PatientCreationForm'
 import { useAuth } from '../contexts/AuthContext'
 import patientService from '../services/patientService'
+import { appointmentAPI, healthAPI } from '../services/api'
 import toast from 'react-hot-toast'
 import { 
   FiPlus, 
@@ -56,6 +57,18 @@ export const DoctorDashboard: React.FC = () => {
   })
   const [showCredentials, setShowCredentials] = useState(false)
   const [patientCredentials, setPatientCredentials] = useState<any>(null)
+  const [showScheduleAppointment, setShowScheduleAppointment] = useState(false)
+  const [showHealthRecords, setShowHealthRecords] = useState(false)
+  const [healthRecords, setHealthRecords] = useState<any[]>([])
+  const [loadingRecords, setLoadingRecords] = useState(false)
+  const [newAppointment, setNewAppointment] = useState({
+    title: '',
+    date: '',
+    time: '',
+    notes: '',
+    providerName: '',
+    providerType: 'doctor'
+  })
   
   const { user, isLoading: authLoading, token } = useAuth()
 
@@ -153,6 +166,43 @@ export const DoctorDashboard: React.FC = () => {
     } catch (error) {
       console.error('Error adding patient:', error)
       toast.error('Failed to create patient')
+    }
+  }
+
+  const handleScheduleAppointment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedPatient) return
+    try {
+      const dateTime = `${newAppointment.date}T${newAppointment.time}:00`
+      await appointmentAPI.createAppointment({
+        title: newAppointment.title,
+        date: dateTime,
+        provider: {
+          name: newAppointment.providerName || user?.firstName + ' ' + user?.lastName || 'Dr.',
+          type: newAppointment.providerType as any
+        },
+        notes: newAppointment.notes,
+        userId: selectedPatient.id
+      })
+      toast.success('Appointment scheduled successfully!')
+      setShowScheduleAppointment(false)
+      setNewAppointment({ title: '', date: '', time: '', notes: '', providerName: '', providerType: 'doctor' })
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to schedule appointment')
+    }
+  }
+
+  const handleViewHealthRecords = async () => {
+    if (!selectedPatient) return
+    try {
+      setShowHealthRecords(true)
+      setLoadingRecords(true)
+      const res = await healthAPI.getRecords({ userId: selectedPatient.id })
+      setHealthRecords(res.data.data.records || [])
+    } catch (e: any) {
+      toast.error('Failed to load health records')
+    } finally {
+      setLoadingRecords(false)
     }
   }
 
@@ -441,11 +491,11 @@ export const DoctorDashboard: React.FC = () => {
                           <FiFileText className="mr-2 h-4 w-4" />
                           Upload Report
                         </button>
-                        <button className="btn btn-outline btn-sm w-full justify-start">
+                        <button onClick={() => setShowScheduleAppointment(true)} className="btn btn-outline btn-sm w-full justify-start">
                           <FiCalendar className="mr-2 h-4 w-4" />
                           Schedule Appointment
                         </button>
-                        <button className="btn btn-outline btn-sm w-full justify-start">
+                        <button onClick={handleViewHealthRecords} className="btn btn-outline btn-sm w-full justify-start">
                           <FiEye className="mr-2 h-4 w-4" />
                           View Health Records
                         </button>
@@ -713,6 +763,80 @@ export const DoctorDashboard: React.FC = () => {
               >
                 Upload Report
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule Appointment Modal */}
+      {showScheduleAppointment && selectedPatient && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold mb-4">Schedule Appointment for {selectedPatient.firstName} {selectedPatient.lastName}</h3>
+            <form onSubmit={handleScheduleAppointment} className="space-y-3">
+              <div>
+                <label className="block text-sm mb-1">Appointment Title</label>
+                <input required className="input w-full" value={newAppointment.title} onChange={e => setNewAppointment({...newAppointment, title: e.target.value})} placeholder="Follow-up consultation" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm mb-1">Date</label>
+                  <input required type="date" className="input w-full" value={newAppointment.date} onChange={e => setNewAppointment({...newAppointment, date: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Time</label>
+                  <input required type="time" className="input w-full" value={newAppointment.time} onChange={e => setNewAppointment({...newAppointment, time: e.target.value})} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Provider Name</label>
+                <input className="input w-full" value={newAppointment.providerName} onChange={e => setNewAppointment({...newAppointment, providerName: e.target.value})} placeholder={user?.firstName + ' ' + user?.lastName || 'Dr.'} />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Notes</label>
+                <textarea className="input w-full" rows={3} value={newAppointment.notes} onChange={e => setNewAppointment({...newAppointment, notes: e.target.value})} placeholder="Additional notes..." />
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <button type="button" className="btn btn-outline" onClick={() => setShowScheduleAppointment(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Schedule</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Health Records Modal */}
+      {showHealthRecords && selectedPatient && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Health Records for {selectedPatient.firstName} {selectedPatient.lastName}</h3>
+              <button className="btn btn-outline btn-sm" onClick={() => setShowHealthRecords(false)}>Close</button>
+            </div>
+            <div className="p-4 max-h-96 overflow-y-auto">
+              {loadingRecords ? (
+                <div className="text-center py-8 text-gray-500">Loading records...</div>
+              ) : healthRecords.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">No health records found.</div>
+              ) : (
+                <div className="space-y-3">
+                  {healthRecords.map((record: any) => (
+                    <div key={record.id} className="p-3 border rounded-lg">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="font-medium text-gray-900">{record.title || 'Untitled'}</div>
+                          <div className="text-sm text-gray-600">{record.recordType || 'general'}</div>
+                          {record.description && <div className="text-sm text-gray-500 mt-1">{record.description}</div>}
+                          <div className="text-xs text-gray-400 mt-1">{new Date(record.date).toLocaleDateString()}</div>
+                        </div>
+                        <span className={`badge ${record.recordType === 'appointment' ? 'badge-primary' : record.recordType === 'lab' ? 'badge-warning' : 'badge-secondary'}`}>
+                          {record.recordType}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

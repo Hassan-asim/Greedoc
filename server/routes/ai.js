@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { authenticateToken } = require('../middleware/auth');
 const axios = require('axios');
+const { db } = require('../config/firebase');
 
 const router = express.Router();
 
@@ -13,6 +14,7 @@ const router = express.Router();
 router.post('/chat', authenticateToken, [
   body('message').notEmpty().withMessage('Message is required'),
   body('type').isIn(['virtual_doctor', 'health_assistant']).withMessage('Valid type is required'),
+  body('patientId').optional().isString(),
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -24,23 +26,36 @@ router.post('/chat', authenticateToken, [
       });
     }
 
-    const { message, context = {}, type } = req.body;
-    const userId = req.user._id;
+    const { message, context = {}, type, patientId: patientIdFromBody } = req.body;
+    const userId = req.user.id;
+
+    // Resolve patientId: patients talk for themselves; doctors may pass patientId
+    const patientId = req.user.role === 'patient' ? userId : (patientIdFromBody || userId);
+
+    // Load conversation history for context (last 20 messages)
+    const history = await getConversationHistory(patientId, 20);
 
     // Get AI response based on type
     let aiResponse;
     if (type === 'virtual_doctor') {
-      aiResponse = await getVirtualDoctorResponse(message, context, userId);
+      aiResponse = await getVirtualDoctorResponse(message, context, userId, history);
     } else {
       aiResponse = await getHealthAssistantResponse(message, context, userId);
     }
+
+    // Persist user and assistant messages to Firestore
+    await Promise.all([
+      saveChatMessage(patientId, 'user', message, type, context),
+      saveChatMessage(patientId, 'assistant', aiResponse, type, {})
+    ]);
 
     res.json({ 
       status: 'success', 
       data: {
         response: aiResponse,
         timestamp: new Date(),
-        type: type
+        type: type,
+        providerUsed: res.locals.aiProvider || 'unknown'
       }
     });
   } catch (error) {
@@ -50,6 +65,63 @@ router.post('/chat', authenticateToken, [
       message: 'Failed to get AI response', 
       error: error.message 
     });
+  }
+});
+
+/**
+ * @route   GET /api/ai/provider
+ * @desc    Diagnostics for configured AI providers (no secrets)
+ * @access  Private
+ */
+router.get('/provider', authenticateToken, async (req, res) => {
+  try {
+    const configured = {
+      openai: !!process.env.OPENAI_API_KEY,
+      openaiModel: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      glm: !!process.env.GLM_API_KEY,
+      glmModel: process.env.GLM_MODEL || 'glm-4',
+      timeoutMs: parseInt(process.env.AI_REQUEST_TIMEOUT_MS || '60000')
+    };
+    res.json({ status: 'success', data: configured });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: 'Failed to read provider config' });
+  }
+});
+
+/**
+ * @route   GET /api/ai/chat/history/:patientId?
+ * @desc    Get chat history with virtual doctor for a patient
+ * @access  Private
+ */
+router.get('/chat/history/:patientId?', authenticateToken, async (req, res) => {
+  try {
+    const requestedPatientId = req.params.patientId || req.user.id;
+
+    // Authorization: patients can only access their own; doctors can access any
+    if (req.user.role !== 'doctor' && requestedPatientId !== req.user.id) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Access denied'
+      });
+    }
+
+    const messages = await getConversationHistory(requestedPatientId, 100);
+    res.json({ status: 'success', data: messages });
+  } catch (error) {
+    console.error('Get chat history error:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to get chat history', error: error.message });
+  }
+});
+
+// Alias without param segment to avoid 404 when no patientId is provided
+router.get('/chat/history', authenticateToken, async (req, res) => {
+  try {
+    const requestedPatientId = req.user.id;
+    const messages = await getConversationHistory(requestedPatientId, 100);
+    res.json({ status: 'success', data: messages });
+  } catch (error) {
+    console.error('Get chat history (alias) error:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to get chat history', error: error.message });
   }
 });
 
@@ -134,48 +206,81 @@ router.post('/analyze-symptoms', authenticateToken, [
 });
 
 // Helper functions
-async function getVirtualDoctorResponse(message, context, userId) {
-  try {
-    // Use GLM API for virtual doctor responses
-    const glmApiKey = process.env.GLM_API_KEY;
-    const glmApiUrl = process.env.GLM_API_URL || 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-    const glmModel = process.env.GLM_MODEL || 'glm-4';
-    
-    if (!glmApiKey) {
-      // Fallback to rule-based responses if no API key
-      return getFallbackDoctorResponse(message);
-    }
+async function getVirtualDoctorResponse(message, context, userId, history = []) {
+  // Prefer OpenAI if configured, else GLM, else fallback
+  const openaiApiKey = process.env.OPENAI_API_KEY;
+  const glmApiKey = process.env.GLM_API_KEY;
 
-    const response = await axios.post(glmApiUrl, {
-      model: glmModel,
-      messages: [
-        {
-          role: 'system',
-          content: `You are a helpful virtual doctor assistant. Provide medical advice, answer health questions, and offer guidance. 
-                   Always remind users to consult with real healthcare professionals for serious concerns. 
-                   Be empathetic, professional, and informative. Keep responses concise but helpful.
-                   Respond in a conversational and caring manner.`
+  // Build messages with lightweight conversation context
+  const systemPrompt = `You are a careful, empathetic virtual doctor. Provide safe, general guidance; do not diagnose or prescribe. 
+Always recommend consulting licensed clinicians for serious issues. 
+Ask 2-4 targeted follow-up questions when needed. Be concise but caring.`;
+
+  const historyMessages = history.map(h => ({
+    role: h.sender === 'assistant' ? 'assistant' : 'user',
+    content: h.message
+  }));
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...historyMessages.slice(-16),
+    { role: 'user', content: buildUserContent(message, context) }
+  ];
+
+  if (openaiApiKey) {
+    try {
+      const openaiUrl = process.env.OPENAI_API_URL || 'https://api.openai.com/v1/chat/completions';
+      const openaiModel = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+      const response = await axios.post(openaiUrl, {
+        model: openaiModel,
+        messages,
+        temperature: 0.6,
+        max_tokens: 600,
+        stream: false
+      }, {
+        headers: {
+          'Authorization': `Bearer ${openaiApiKey}`,
+          'Content-Type': 'application/json',
+          ...(process.env.OPENAI_ORG_ID ? { 'OpenAI-Organization': process.env.OPENAI_ORG_ID } : {}),
+          ...(process.env.OPENAI_PROJECT_ID ? { 'OpenAI-Project': process.env.OPENAI_PROJECT_ID } : {})
         },
-        {
-          role: 'user',
-          content: message
-        }
-      ],
-      max_tokens: 500,
-      temperature: 0.7,
-      stream: false
-    }, {
-      headers: {
-        'Authorization': `Bearer ${glmApiKey}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    return response.data.choices[0].message.content;
-  } catch (error) {
-    console.error('GLM API error:', error);
-    return getFallbackDoctorResponse(message);
+        timeout: parseInt(process.env.AI_REQUEST_TIMEOUT_MS || '60000')
+      });
+      console.log('[AI] Provider=OpenAI, Model=' + (process.env.OPENAI_MODEL || 'gpt-4o-mini'));
+      try { res.locals.aiProvider = 'openai'; } catch (_) {}
+      return response.data.choices[0].message.content;
+    } catch (err) {
+      console.error('[AI] OpenAI call failed:', err?.response?.data || err.message);
+    }
   }
+
+  if (glmApiKey) {
+    try {
+      const glmApiUrl = process.env.GLM_API_URL || 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+      const glmModel = process.env.GLM_MODEL || 'glm-4';
+      const response = await axios.post(glmApiUrl, {
+        model: glmModel,
+        messages,
+        max_tokens: 500,
+        temperature: 0.7,
+        stream: false
+      }, {
+        headers: {
+          'Authorization': `Bearer ${glmApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: parseInt(process.env.AI_REQUEST_TIMEOUT_MS || '60000')
+      });
+      console.log('[AI] Provider=GLM, Model=' + (process.env.GLM_MODEL || 'glm-4'));
+      try { res.locals.aiProvider = 'glm'; } catch (_) {}
+      return response.data.choices[0].message.content;
+    } catch (err) {
+      console.error('[AI] GLM call failed:', err?.response?.data || err.message);
+    }
+  }
+
+  console.warn('[AI] No provider available; using fallback response');
+  return getFallbackDoctorResponse(message);
 }
 
 function getFallbackDoctorResponse(message) {
@@ -243,3 +348,51 @@ async function analyzeSymptoms(symptoms, patientId) {
 }
 
 module.exports = router;
+
+// ===== Helper: persistence and formatting =====
+async function saveChatMessage(patientId, sender, message, type, context) {
+  try {
+    const doc = {
+      chatRoomId: `virtual_doctor_${patientId}`,
+      patientId,
+      sender, // 'user' | 'assistant'
+      message,
+      messageType: 'text',
+      aiType: type,
+      context: context || {},
+      isRead: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    await db.collection('virtual_doctor_chats').add(doc);
+  } catch (e) {
+    console.error('Failed to save chat message:', e);
+  }
+}
+
+async function getConversationHistory(patientId, limit = 20) {
+  const snap = await db
+    .collection('virtual_doctor_chats')
+    .where('patientId', '==', patientId)
+    .orderBy('createdAt', 'asc')
+    .limit(limit)
+    .get();
+  const items = [];
+  snap.forEach(doc => {
+    const d = doc.data();
+    items.push({
+      id: doc.id,
+      sender: d.sender,
+      message: d.message,
+      createdAt: d.createdAt?.toDate ? d.createdAt.toDate() : d.createdAt
+    });
+  });
+  return items;
+}
+
+function buildUserContent(message, context) {
+  if (context && context.action) {
+    return `User message: ${message}\nContext action: ${context.action}`;
+  }
+  return message;
+}

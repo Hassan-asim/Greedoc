@@ -59,6 +59,10 @@ if (process.env.HEALTH_AGENT_ENABLED === "true") {
   healthAgent.start().catch(console.error);
 }
 
+// Start Notification Agent
+const notificationAgent = require('./services/notificationAgent');
+notificationAgent.start();
+
 // Routes
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/users", require("./routes/users"));
@@ -67,6 +71,8 @@ app.use("/api/health", require("./routes/health"));
 app.use("/api/medications", require("./routes/medications"));
 app.use("/api/appointments", require("./routes/appointments"));
 app.use("/api/ai", require("./routes/ai"));
+app.use("/api/events", require("./routes/events"));
+app.use("/api/notifications", require("./routes/notifications"));
 app.use("/api/chat", require("./routes/chat"));
 
 // Root API endpoint

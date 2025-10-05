@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { 
   FiCalendar, 
@@ -11,6 +11,8 @@ import {
   FiActivity,
   FiArrowLeft
 } from 'react-icons/fi'
+import { eventsAPI } from '../services/api'
+import toast from 'react-hot-toast'
 
 interface CalendarEvent {
   id: string
@@ -72,10 +74,32 @@ export const Calendar: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<'month' | 'week' | 'day'>('month')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [eventsByDate, setEventsByDate] = useState<Record<string, CalendarEvent[]>>({})
+  const [isAdding, setIsAdding] = useState(false)
+  const [newEvent, setNewEvent] = useState<{ title: string; type: CalendarEvent['type']; date: string; time: string; description: string}>(
+    { title: '', type: 'reminder', date: '', time: '', description: '' }
+  )
 
   const getEventsForDate = (date: string) => {
-    return mockEvents.filter(event => event.date === date)
+    const saved = eventsByDate[date] || []
+    const mocks = mockEvents.filter(event => event.date === date)
+    return [...saved, ...mocks]
   }
+
+  const loadMonthEvents = async (date: Date) => {
+    try {
+      const year = date.getFullYear()
+      const month = date.getMonth() + 1
+      const res = await eventsAPI.getMonthEvents(year, month)
+      setEventsByDate(res.data.data.events || {})
+    } catch (e: any) {
+      // silent
+    }
+  }
+
+  useEffect(() => {
+    loadMonthEvents(currentDate)
+  }, [currentDate])
 
   const getEventIcon = (type: string) => {
     switch (type) {
@@ -168,7 +192,11 @@ export const Calendar: React.FC = () => {
               <h1 className="ml-2 text-2xl font-bold text-gray-900 dark:text-gray-100">Health Calendar</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <button className="btn btn-primary btn-md inline-flex items-center">
+              <button onClick={() => {
+                const dateStr = selectedDate || formatDate(new Date())
+                setNewEvent({ title: '', type: 'reminder', date: dateStr, time: '', description: '' })
+                setIsAdding(true)
+              }} className="btn btn-primary btn-md inline-flex items-center">
                 <FiPlus className="mr-2 h-4 w-4" />
                 Add Event
               </button>
@@ -352,6 +380,62 @@ export const Calendar: React.FC = () => {
           </div>
         </div>
       </div>
+      {isAdding && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Add Event</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm mb-1">Title</label>
+                <input className="input w-full" value={newEvent.title} onChange={e => setNewEvent({ ...newEvent, title: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Type</label>
+                <select className="input w-full" value={newEvent.type} onChange={e => setNewEvent({ ...newEvent, type: e.target.value as any })}>
+                  <option value="medication">Medication</option>
+                  <option value="appointment">Appointment</option>
+                  <option value="exercise">Exercise</option>
+                  <option value="reminder">Reminder</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm mb-1">Date</label>
+                  <input type="date" className="input w-full" value={newEvent.date} onChange={e => setNewEvent({ ...newEvent, date: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Time</label>
+                  <input type="time" className="input w-full" value={newEvent.time} onChange={e => setNewEvent({ ...newEvent, time: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Description</label>
+                <textarea className="input w-full" value={newEvent.description} onChange={e => setNewEvent({ ...newEvent, description: e.target.value })} />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <button className="btn btn-outline" onClick={() => setIsAdding(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={async () => {
+                try {
+                  const payload = {
+                    title: newEvent.title,
+                    type: newEvent.type,
+                    date: newEvent.date,
+                    time: newEvent.time || undefined,
+                    description: newEvent.description || undefined,
+                  }
+                  await eventsAPI.createEvent(payload)
+                  toast.success('Event added')
+                  setIsAdding(false)
+                  loadMonthEvents(currentDate)
+                } catch (e: any) {
+                  toast.error(e?.response?.data?.message || 'Failed to add event')
+                }
+              }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

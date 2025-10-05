@@ -1,7 +1,8 @@
 import api from "./api";
+import { Patient, PatientCredentials, PatientData } from "../types";
 
 const patientService = {
-  getPatients: async () => {
+  getPatients: async (): Promise<Patient[]> => {
     try {
       console.log("Fetching patients...");
       const response = await api.get("/patients");
@@ -22,7 +23,7 @@ const patientService = {
         console.warn("Unexpected response structure:", response.data);
         return [];
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching patients:", error);
       console.error("Error details:", {
         status: error.response?.status,
@@ -35,41 +36,41 @@ const patientService = {
     }
   },
 
-  createPatient: async (patientData) => {
+  createPatient: async (patientData: PatientData): Promise<PatientCredentials> => {
     try {
       const response = await api.post("/patients", patientData);
       return response.data.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating patient:", error);
       throw error;
     }
   },
 
-  getPatient: async (patientId) => {
+  getPatient: async (patientId: string): Promise<Patient> => {
     try {
       const response = await api.get(`/patients/${patientId}`);
       return response.data.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching patient:", error);
       throw error;
     }
   },
 
-  getPatientCredentials: async (patientId) => {
+  getPatientCredentials: async (patientId: string): Promise<PatientCredentials> => {
     try {
       const response = await api.get(`/patients/${patientId}/credentials`);
       return response.data.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching patient credentials:", error);
       throw error;
     }
   },
 
-  resetPatientPassword: async (patientId) => {
+  resetPatientPassword: async (patientId: string): Promise<PatientCredentials> => {
     try {
       const response = await api.post(`/patients/${patientId}/reset-password`);
       return response.data.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error resetting patient password:", error);
       throw error;
     }

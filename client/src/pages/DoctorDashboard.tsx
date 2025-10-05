@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import ReportUpload from '../components/ReportUpload'
+import { PatientCreationForm } from '../components/PatientCreationForm'
+import { useAuth } from '../contexts/AuthContext'
 import patientService from '../services/patientService'
 import toast from 'react-hot-toast'
 import { 
@@ -54,20 +56,40 @@ export const DoctorDashboard: React.FC = () => {
   })
   const [showCredentials, setShowCredentials] = useState(false)
   const [patientCredentials, setPatientCredentials] = useState<any>(null)
+  
+  const { user, isLoading: authLoading, token } = useAuth()
 
-  // Load patients from database
+  // Debug authentication state
   useEffect(() => {
-    loadPatients()
-  }, [])
+    console.log('DoctorDashboard auth state:', {
+      user: user ? { id: user.id, email: user.email, role: user.role } : null,
+      authLoading,
+      hasToken: !!token,
+      tokenPreview: token ? `${token.substring(0, 20)}...` : 'No token',
+      localStorageToken: localStorage.getItem('token') ? `${localStorage.getItem('token')?.substring(0, 20)}...` : 'No token'
+    })
+  }, [user, authLoading, token])
+
+  // Load patients from database only when user is authenticated
+  useEffect(() => {
+    if (user && !authLoading) {
+      loadPatients()
+    }
+  }, [user, authLoading])
 
   const loadPatients = async () => {
     try {
       setLoading(true)
       const patientsData = await patientService.getPatients()
-      setPatients(patientsData)
+      // Ensure patientsData is always an array
+      const patientsArray = Array.isArray(patientsData) ? patientsData : []
+      console.log('Loaded patients:', patientsArray)
+      setPatients(patientsArray)
     } catch (error) {
       console.error('Error loading patients:', error)
       toast.error('Failed to load patients')
+      // Set empty array on error to prevent crashes
+      setPatients([])
     } finally {
       setLoading(false)
     }
@@ -134,17 +156,41 @@ export const DoctorDashboard: React.FC = () => {
     }
   }
 
-  const filteredPatients = patients.filter(patient =>
+  const filteredPatients = Array.isArray(patients) ? patients.filter(patient =>
     `${patient.firstName} ${patient.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.cnic?.includes(searchTerm) ||
     patient.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  ) : []
 
   const stats = {
-    totalPatients: patients.length,
-    activePatients: patients.filter(p => p.status === 'active').length,
+    totalPatients: Array.isArray(patients) ? patients.length : 0,
+    activePatients: Array.isArray(patients) ? patients.filter(p => p.status === 'active').length : 0,
     pendingReports: 5,
     todayAppointments: 3
+  }
+
+  // Show loading while authentication is being verified
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    )
+  }
+
+  // Show error if user is not authenticated
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h2>
+          <p className="text-gray-600 mb-4">You need to be logged in to access this page.</p>
+          <Link to="/doctor/login" className="btn btn-primary">
+            Go to Login
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -158,6 +204,13 @@ export const DoctorDashboard: React.FC = () => {
               <h1 className="ml-2 text-2xl font-bold text-gray-900">Doctor Portal</h1>
             </div>
             <div className="flex items-center space-x-4">
+              <Link
+                to="/doctor/chat"
+                className="btn btn-outline btn-md inline-flex items-center"
+              >
+                <FiMessageCircle className="mr-2 h-4 w-4" />
+                Chat with Patients
+              </Link>
               <button
                 onClick={() => setShowAddPatient(true)}
                 className="btn btn-primary btn-md inline-flex items-center"
@@ -403,7 +456,7 @@ export const DoctorDashboard: React.FC = () => {
                           <FiEdit className="mr-2 h-4 w-4" />
                           View Credentials
                         </button>
-                        <Link to="/chat" className="btn btn-outline btn-sm w-full justify-start">
+                        <Link to="/doctor/chat" className="btn btn-outline btn-sm w-full justify-start">
                           <FiMessageCircle className="mr-2 h-4 w-4" />
                           Chat with Patients
                         </Link>
@@ -447,127 +500,15 @@ export const DoctorDashboard: React.FC = () => {
       {/* Add Patient Modal */}
       {showAddPatient && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Patient</h3>
-            
-            <form onSubmit={handleAddPatient} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newPatient.firstName}
-                    onChange={(e) => setNewPatient({...newPatient, firstName: e.target.value})}
-                    className="input w-full"
-                    placeholder="Enter first name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newPatient.lastName}
-                    onChange={(e) => setNewPatient({...newPatient, lastName: e.target.value})}
-                    className="input w-full"
-                    placeholder="Enter last name"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  CNIC
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newPatient.cnic}
-                  onChange={(e) => setNewPatient({...newPatient, cnic: e.target.value})}
-                  className="input w-full"
-                  placeholder="12345-1234567-1"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={newPatient.phone}
-                  onChange={(e) => setNewPatient({...newPatient, phone: e.target.value})}
-                  className="input w-full"
-                  placeholder="+92 300 1234567"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={newPatient.email}
-                  onChange={(e) => setNewPatient({...newPatient, email: e.target.value})}
-                  className="input w-full"
-                  placeholder="patient@example.com"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date of Birth
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={newPatient.dateOfBirth}
-                    onChange={(e) => setNewPatient({...newPatient, dateOfBirth: e.target.value})}
-                    className="input w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Gender
-                  </label>
-                  <select
-                    value={newPatient.gender}
-                    onChange={(e) => setNewPatient({...newPatient, gender: e.target.value})}
-                    className="input w-full"
-                  >
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowAddPatient(false)}
-                  className="btn btn-outline"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                >
-                  Add Patient
-                </button>
-              </div>
-            </form>
-          </div>
+          <PatientCreationForm
+            onPatientCreated={(patient, credentials) => {
+              setPatientCredentials(credentials)
+              setShowCredentials(true)
+              setShowAddPatient(false)
+              loadPatients()
+            }}
+            onClose={() => setShowAddPatient(false)}
+          />
         </div>
       )}
 
@@ -584,9 +525,9 @@ export const DoctorDashboard: React.FC = () => {
                 </label>
                 <select className="input w-full">
                   <option value="">Select a patient</option>
-                  {patients.map(patient => (
+                  {Array.isArray(patients) && patients.map(patient => (
                     <option key={patient.id} value={patient.id}>
-                      {patient.name}
+                      {patient.firstName} {patient.lastName}
                     </option>
                   ))}
                 </select>

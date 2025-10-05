@@ -59,13 +59,14 @@ interface AuthContextType {
   token: string | null
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
-  register: (userData: RegisterData) => Promise<void>
+  registerDoctor: (userData: DoctorRegisterData) => Promise<void>
+  createPatient: (userData: PatientCreateData) => Promise<{ patient: any; loginCredentials: any }>
   logout: () => void
   updateProfile: (userData: Partial<User>) => Promise<void>
   refreshToken: () => Promise<void>
 }
 
-interface RegisterData {
+interface DoctorRegisterData {
   firstName: string
   lastName: string
   email: string
@@ -73,6 +74,19 @@ interface RegisterData {
   dateOfBirth: string
   gender: string
   phoneNumber?: string
+  specialization?: string
+  licenseNumber?: string
+}
+
+interface PatientCreateData {
+  firstName: string
+  lastName: string
+  email: string
+  phoneNumber: string
+  dateOfBirth: string
+  gender: string
+  password?: string
+  medicalInfo?: any
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -101,16 +115,55 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const storedToken = localStorage.getItem('token')
         const storedRefreshToken = localStorage.getItem('refreshToken')
         
+        console.log('Auth initialization:', {
+          hasToken: !!storedToken,
+          hasRefreshToken: !!storedRefreshToken,
+          tokenPreview: storedToken ? `${storedToken.substring(0, 20)}...` : 'No token'
+        })
+        
         if (storedToken) {
           setToken(storedToken)
           api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`
           
           // Verify token and get user data
-          const response = await api.get('/auth/me')
-          setUser(response.data.data.user)
+          try {
+            console.log('Verifying token with /auth/me...')
+            const response = await api.get('/auth/me')
+            console.log('Token verification successful:', response.data)
+            setUser(response.data.data.user)
+          } catch (error: any) {
+            console.error('Token verification failed:', error)
+            // If token is invalid, try to refresh
+            if (storedRefreshToken) {
+              try {
+                console.log('Attempting token refresh...')
+                await refreshToken()
+              } catch (refreshError) {
+                console.error('Token refresh failed:', refreshError)
+                // Clear invalid tokens
+                localStorage.removeItem('token')
+                localStorage.removeItem('refreshToken')
+                setToken(null)
+                setUser(null)
+              }
+            } else {
+              // No refresh token, clear everything
+              localStorage.removeItem('token')
+              setToken(null)
+              setUser(null)
+            }
+          }
         } else if (storedRefreshToken) {
           // Try to refresh token
-          await refreshToken()
+          try {
+            console.log('Attempting token refresh with stored refresh token...')
+            await refreshToken()
+          } catch (error) {
+            console.error('Token refresh failed:', error)
+            localStorage.removeItem('refreshToken')
+          }
+        } else {
+          console.log('No tokens found in localStorage')
         }
       } catch (error) {
         console.error('Auth initialization error:', error)
@@ -130,9 +183,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true)
+      
+      // Clear any existing tokens before login
+      localStorage.removeItem('token')
+      localStorage.removeItem('refreshToken')
+      api.defaults.headers.common['Authorization'] = undefined
+      
+      console.log('Attempting login for:', email)
       const response = await api.post('/auth/login', { email, password })
       
       const { user: userData, token: authToken, refreshToken } = response.data.data
+      
+      console.log('Login successful:', {
+        user: userData,
+        hasToken: !!authToken,
+        hasRefreshToken: !!refreshToken,
+        tokenPreview: authToken ? `${authToken.substring(0, 20)}...` : 'No token'
+      })
       
       // Store tokens
       localStorage.setItem('token', authToken)
@@ -147,20 +214,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       toast.success('Login successful!')
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Login failed'
-      toast.error(message)
+      console.error('Login failed:', error)
+      // Don't show toast for login errors - let components handle them
       throw error
     } finally {
       setIsLoading(false)
     }
   }
 
-  const register = async (userData: RegisterData) => {
+  const registerDoctor = async (userData: DoctorRegisterData) => {
     try {
       setIsLoading(true)
       const response = await api.post('/auth/register', userData)
       
-      const { user: newUser, token: authToken, refreshToken } = response.data.data
+      const { doctor: newDoctor, token: authToken, refreshToken } = response.data.data
       
       // Store tokens
       localStorage.setItem('token', authToken)
@@ -170,12 +237,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       api.defaults.headers.common['Authorization'] = `Bearer ${authToken}`
       
       // Update state
-      setUser(newUser)
+      setUser(newDoctor)
       setToken(authToken)
       
-      toast.success('Registration successful!')
+      toast.success('Doctor registration successful!')
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Registration failed'
+      const message = error.response?.data?.message || 'Doctor registration failed'
+      toast.error(message)
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const createPatient = async (userData: PatientCreateData) => {
+    try {
+      setIsLoading(true)
+      const response = await api.post('/patients', userData)
+      
+      const { patient, loginCredentials } = response.data.data
+      
+      toast.success('Patient created successfully!')
+      return { patient, loginCredentials }
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Patient creation failed'
       toast.error(message)
       throw error
     } finally {
@@ -246,7 +331,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     token,
     isLoading,
     login,
-    register,
+    registerDoctor,
+    createPatient,
     logout,
     updateProfile,
     refreshToken

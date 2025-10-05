@@ -49,7 +49,7 @@ interface AIInsight {
 // Real data will be loaded from the database
 
 export const PatientDashboard: React.FC = () => {
-  const { user } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const [selectedMetric, setSelectedMetric] = useState<HealthMetric | null>(null)
   const [showEmergencyMode, setShowEmergencyMode] = useState(false)
   const [healthMetrics, setHealthMetrics] = useState<HealthMetric[]>([])
@@ -57,18 +57,86 @@ export const PatientDashboard: React.FC = () => {
   const [aiInsights, setAIInsights] = useState<AIInsight[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Debug authentication state
   useEffect(() => {
-    loadPatientData()
-  }, [])
+    console.log('PatientDashboard auth state:', {
+      user: user ? { id: user.id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName } : null,
+      authLoading,
+      hasToken: !!localStorage.getItem('token')
+    })
+  }, [user, authLoading])
+
+  useEffect(() => {
+    if (user && !authLoading) {
+      loadPatientData()
+    }
+  }, [user, authLoading])
 
   const loadPatientData = async () => {
     try {
       setLoading(true)
-      // For now, we'll use empty arrays and show loading states
-      // In a real app, these would be API calls
-      setHealthMetrics([])
+      console.log('Loading patient data for user:', user)
+      
+      // Mock data for demonstration - in a real app, these would be API calls
+      const mockHealthMetrics: HealthMetric[] = [
+        {
+          id: '1',
+          type: 'heart_rate',
+          value: '72',
+          unit: 'bpm',
+          trend: 'stable',
+          status: 'good',
+          timestamp: '2 hours ago'
+        },
+        {
+          id: '2',
+          type: 'blood_pressure',
+          value: '120/80',
+          unit: 'mmHg',
+          trend: 'stable',
+          status: 'good',
+          timestamp: '1 hour ago'
+        },
+        {
+          id: '3',
+          type: 'steps',
+          value: '8,500',
+          unit: 'steps',
+          trend: 'up',
+          status: 'good',
+          timestamp: 'Today'
+        },
+        {
+          id: '4',
+          type: 'sleep',
+          value: '7.5',
+          unit: 'hours',
+          trend: 'stable',
+          status: 'good',
+          timestamp: 'Last night'
+        }
+      ]
+
+      const mockAIInsights: AIInsight[] = [
+        {
+          id: '1',
+          title: 'Exercise Recommendation',
+          description: 'Based on your recent activity, consider adding 15 minutes of cardio to your morning routine.',
+          type: 'recommendation',
+          priority: 'medium'
+        },
+        {
+          id: '2',
+          title: 'Medication Reminder',
+          description: 'Don\'t forget to take your evening medication at 8:00 PM.',
+          type: 'reminder',
+          priority: 'high'
+        }
+      ]
+
+      setHealthMetrics(mockHealthMetrics)
       setRiskAlerts([])
-      setAIInsights([])
+      setAIInsights(mockAIInsights)
     } catch (error) {
       console.error('Error loading patient data:', error)
     } finally {
@@ -114,6 +182,30 @@ export const PatientDashboard: React.FC = () => {
     }
   }
 
+  // Show loading while authentication is being verified
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    )
+  }
+
+  // Show error if user is not authenticated
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h2>
+          <p className="text-gray-600 mb-4">You need to be logged in to access this page.</p>
+          <Link to="/patient/login" className="btn btn-primary">
+            Go to Login
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -150,9 +242,43 @@ export const PatientDashboard: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back, Ahmed!</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            Welcome back, {user ? `${user.firstName || 'Patient'}` : 'Patient'}!
+          </h2>
           <p className="text-gray-600">Here's your health overview for today</p>
         </div>
+
+        {/* Patient Info Section */}
+        {user && (
+          <div className="mb-8">
+            <div className="card">
+              <div className="card-content">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-3 bg-primary-100 rounded-full">
+                      <FiHeart className="h-6 w-6 text-primary-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900">
+                        {user.firstName} {user.lastName}
+                      </h3>
+                      <p className="text-sm text-gray-600">{user.email}</p>
+                      <p className="text-sm text-gray-500">
+                        Patient ID: {user.id} | Role: {user.role}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm text-gray-600">
+                      <p>Last Login: {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'First time'}</p>
+                      <p className="text-green-600 font-medium">Status: Active</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Health Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -322,7 +448,7 @@ export const PatientDashboard: React.FC = () => {
                     <FiEdit className="mr-2 h-4 w-4" />
                     Log Health Data
                   </Link>
-                  <Link to="/chat" className="btn btn-outline btn-sm w-full justify-start">
+                  <Link to="/patient/chat" className="btn btn-outline btn-sm w-full justify-start">
                     <FiMessageCircle className="mr-2 h-4 w-4" />
                     Chat with Doctor
                   </Link>

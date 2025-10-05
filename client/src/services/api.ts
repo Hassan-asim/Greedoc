@@ -14,9 +14,25 @@ export const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
-    if (token) {
+    
+    // Don't add token to public endpoints
+    const publicEndpoints = ['/auth/login', '/auth/register', '/auth/refresh']
+    const isPublicEndpoint = publicEndpoints.some(endpoint => config.url?.includes(endpoint))
+    
+    console.log('API Request:', {
+      url: config.url,
+      method: config.method,
+      hasToken: !!token,
+      isPublicEndpoint: isPublicEndpoint,
+      token: token ? `${token.substring(0, 20)}...` : 'No token'
+    })
+    
+    if (token && !isPublicEndpoint) {
       config.headers.Authorization = `Bearer ${token}`
+    } else if (!token && !isPublicEndpoint) {
+      console.warn('No token found in localStorage for protected request:', config.url)
     }
+    
     return config
   },
   (error) => {

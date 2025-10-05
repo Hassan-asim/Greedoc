@@ -1,22 +1,46 @@
-import api from './api';
+import api from "./api";
 
 const patientService = {
   getPatients: async () => {
     try {
-      const response = await api.get('/patients');
-      return response.data.data;
+      console.log("Fetching patients...");
+      const response = await api.get("/patients");
+      console.log("Patients fetched successfully:", response.data);
+
+      // Handle the response structure properly
+      if (response.data && response.data.data && response.data.data.patients) {
+        return response.data.data.patients;
+      } else if (
+        response.data &&
+        response.data.data &&
+        Array.isArray(response.data.data)
+      ) {
+        return response.data.data;
+      } else if (Array.isArray(response.data)) {
+        return response.data;
+      } else {
+        console.warn("Unexpected response structure:", response.data);
+        return [];
+      }
     } catch (error) {
-      console.error('Error fetching patients:', error);
-      throw error;
+      console.error("Error fetching patients:", error);
+      console.error("Error details:", {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+      });
+      // Return empty array instead of throwing to prevent app crash
+      return [];
     }
   },
 
   createPatient: async (patientData) => {
     try {
-      const response = await api.post('/patients', patientData);
+      const response = await api.post("/patients", patientData);
       return response.data.data;
     } catch (error) {
-      console.error('Error creating patient:', error);
+      console.error("Error creating patient:", error);
       throw error;
     }
   },
@@ -26,7 +50,7 @@ const patientService = {
       const response = await api.get(`/patients/${patientId}`);
       return response.data.data;
     } catch (error) {
-      console.error('Error fetching patient:', error);
+      console.error("Error fetching patient:", error);
       throw error;
     }
   },
@@ -36,7 +60,7 @@ const patientService = {
       const response = await api.get(`/patients/${patientId}/credentials`);
       return response.data.data;
     } catch (error) {
-      console.error('Error fetching patient credentials:', error);
+      console.error("Error fetching patient credentials:", error);
       throw error;
     }
   },
@@ -46,10 +70,10 @@ const patientService = {
       const response = await api.post(`/patients/${patientId}/reset-password`);
       return response.data.data;
     } catch (error) {
-      console.error('Error resetting patient password:', error);
+      console.error("Error resetting patient password:", error);
       throw error;
     }
-  }
+  },
 };
 
 export default patientService;

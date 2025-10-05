@@ -1,18 +1,21 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { FiEye, FiEyeOff, FiHeart, FiLock, FiUser } from 'react-icons/fi'
+import { FiEye, FiEyeOff, FiHeart, FiLock, FiMail } from 'react-icons/fi'
+import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 
 interface PatientLoginForm {
-  cnic: string
+  email: string
   password: string
 }
 
 export const PatientLogin: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [loginError, setLoginError] = useState<string | null>(null)
   const navigate = useNavigate()
+  const { login } = useAuth()
 
   const {
     register,
@@ -22,13 +25,24 @@ export const PatientLogin: React.FC = () => {
 
   const onSubmit = async (data: PatientLoginForm) => {
     setIsLoading(true)
+    setLoginError(null) // Clear previous errors
+    
     try {
-      // Handle patient login
-      console.log('Patient login:', data)
-      toast.success('Login successful!')
+      await login(data.email, data.password)
       navigate('/patient/dashboard')
-    } catch (error) {
-      toast.error('Login failed. Please check your credentials.')
+    } catch (error: any) {
+      // Handle specific error messages
+      if (error.response?.status === 401) {
+        setLoginError('Invalid email or password. Please check your credentials and try again.')
+      } else if (error.response?.status === 403) {
+        setLoginError('Your account has been deactivated. Please contact your doctor.')
+      } else if (error.response?.status === 400) {
+        setLoginError('Please check your email and password format.')
+      } else if (error.response?.data?.message) {
+        setLoginError(error.response.data.message)
+      } else {
+        setLoginError('Login failed. Please try again.')
+      }
     } finally {
       setIsLoading(false)
     }
@@ -51,27 +65,47 @@ export const PatientLogin: React.FC = () => {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+            {/* Error Message Display */}
+            {loginError && (
+              <div className="bg-red-50 border border-red-200 rounded-md p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-red-800">
+                      Login Failed
+                    </h3>
+                    <div className="mt-2 text-sm text-red-700">
+                      <p>{loginError}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             <div>
-              <label htmlFor="cnic" className="block text-sm font-medium text-gray-700">
-                CNIC
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email Address
               </label>
               <div className="mt-1 relative">
                 <input
-                  {...register('cnic', { 
-                    required: 'CNIC is required',
+                  {...register('email', { 
+                    required: 'Email is required',
                     pattern: {
-                      value: /^\d{5}-\d{7}-\d{1}$/,
-                      message: 'Please enter CNIC in format: 12345-1234567-1'
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: 'Invalid email address'
                     }
                   })}
-                  type="text"
+                  type="email"
                   className="input w-full"
-                  placeholder="12345-1234567-1"
+                  placeholder="Enter your email"
                 />
-                <FiUser className="absolute right-3 top-3 h-5 w-5 text-gray-400" />
+                <FiMail className="absolute right-3 top-3 h-5 w-5 text-gray-400" />
               </div>
-              {errors.cnic && (
-                <p className="mt-1 text-sm text-error-500">{errors.cnic.message}</p>
+              {errors.email && (
+                <p className="mt-1 text-sm text-error-500">{errors.email.message}</p>
               )}
             </div>
 
@@ -104,6 +138,9 @@ export const PatientLogin: React.FC = () => {
                 <button
                   type="button"
                   className="text-primary-600 hover:text-primary-500"
+                  onClick={() => {
+                    setLoginError('Please contact your doctor to reset your password. They can provide you with new login credentials.')
+                  }}
                 >
                   Forgot password?
                 </button>
@@ -117,9 +154,19 @@ export const PatientLogin: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="btn btn-primary btn-md w-full"
+                className="btn btn-primary btn-md w-full disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Signing in...
+                  </div>
+                ) : (
+                  'Sign In'
+                )}
               </button>
             </div>
 

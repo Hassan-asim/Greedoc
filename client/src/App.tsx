@@ -14,6 +14,8 @@ import { Calendar } from './pages/Calendar'
 import { HealthTwin } from './pages/HealthTwin'
 import { PrescriptionModule } from './pages/PrescriptionModule'
 import ChatPage from './pages/ChatPage'
+import PatientChat from './pages/PatientChat'
+import DoctorChat from './pages/DoctorChat'
 import { Dashboard } from './pages/Dashboard'
 import { HealthRecords } from './pages/HealthRecords'
 import { Medications } from './pages/Medications'
@@ -38,6 +40,8 @@ function App() {
             <Route path="/health-twin" element={<HealthTwin />} />
             <Route path="/prescription" element={<PrescriptionModule />} />
             <Route path="/chat" element={<ChatPage />} />
+            <Route path="/patient/chat" element={<PatientChat />} />
+            <Route path="/doctor/chat" element={<DoctorChat />} />
         
         {/* Protected routes */}
         <Route path="/app" element={

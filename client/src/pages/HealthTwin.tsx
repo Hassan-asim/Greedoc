@@ -210,11 +210,11 @@ export const HealthTwin: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
-              <Link to="/patient/dashboard" className="mr-4 p-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100">
+              <Link to="/patient/dashboard" className="mr-4 p-2 text-gray-600 hover:text-gray-900">
                 <FiArrowLeft className="h-5 w-5" />
               </Link>
               <FiZap className="h-8 w-8 text-primary-500" />
-              <h1 className="ml-2 text-2xl font-bold text-gray-900 dark:text-gray-100">Health Twin</h1>
+              <h1 className="ml-2 text-2xl font-bold text-gray-900">Health Twin</h1>
             </div>
             <div className="flex items-center space-x-4">
               <Link to="/virtual-doctor" className="btn btn-outline btn-md">
@@ -244,15 +244,15 @@ export const HealthTwin: React.FC = () => {
                         onClick={() => handleMetricSelect(metric)}
                         className={`w-full p-4 rounded-lg border text-left transition-all hover:shadow-md ${
                           selectedMetric?.type === metric.type
-                            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                            ? 'border-primary-500 bg-primary-50'
+                            : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
                         <div className="flex items-center">
                           <IconComponent className={`h-6 w-6 ${metric.color} mr-3`} />
                           <div>
-                            <h4 className="font-medium text-gray-900 dark:text-gray-100">{metric.label}</h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">{metric.unit}</p>
+                            <h4 className="font-medium text-gray-900">{metric.label}</h4>
+                            <p className="text-sm text-gray-600">{metric.unit}</p>
                           </div>
                         </div>
                       </button>
@@ -280,13 +280,13 @@ export const HealthTwin: React.FC = () => {
                   <div className="space-y-6">
                     {/* Value Input */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         Value ({selectedMetric.unit})
                       </label>
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={decrementValue}
-                          className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50"
                         >
                           <FiMinus className="h-4 w-4" />
                         </button>
@@ -302,19 +302,19 @@ export const HealthTwin: React.FC = () => {
                         />
                         <button
                           onClick={incrementValue}
-                          className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50"
                         >
                           <FiPlus className="h-4 w-4" />
                         </button>
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      <p className="text-xs text-gray-500 mt-1">
                         Range: {selectedMetric.min} - {selectedMetric.max} {selectedMetric.unit}
                       </p>
                     </div>
 
                     {/* Notes */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         Notes (Optional)
                       </label>
                       <textarea
@@ -351,8 +351,8 @@ export const HealthTwin: React.FC = () => {
               <div className="card">
                 <div className="card-content text-center py-12">
                   <FiActivity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Select a Metric</h3>
-                  <p className="text-gray-600 dark:text-gray-400">Choose a health metric from the left to start logging your data.</p>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Metric</h3>
+                  <p className="text-gray-600">Choose a health metric from the left to start logging your data.</p>
                 </div>
               </div>
             )}
@@ -372,28 +372,28 @@ export const HealthTwin: React.FC = () => {
                     return (
                       <div
                         key={data.id}
-                        className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg"
+                        className="p-3 border border-gray-200 rounded-lg"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center">
                             <IconComponent className={`h-5 w-5 ${getMetricColor(data.type)} mr-3`} />
                             <div>
-                              <h4 className="font-medium text-gray-900 dark:text-gray-100">
+                              <h4 className="font-medium text-gray-900">
                                 {data.value} {data.unit}
                               </h4>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                              <p className="text-sm text-gray-600">
                                 {new Date(data.timestamp).toLocaleDateString()}
                               </p>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                            <p className="text-xs text-gray-500">
                               {new Date(data.timestamp).toLocaleTimeString()}
                             </p>
                           </div>
                         </div>
                         {data.notes && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 italic">
+                          <p className="text-sm text-gray-600 mt-2 italic">
                             "{data.notes}"
                           </p>
                         )}
@@ -415,15 +415,15 @@ export const HealthTwin: React.FC = () => {
             </div>
             <div className="card-content">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="text-center py-12 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="text-center py-12 bg-gray-50 rounded-lg">
                   <FiTrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">7-Day Trend</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Chart will be displayed here</p>
+                  <h4 className="font-medium text-gray-900 mb-2">7-Day Trend</h4>
+                  <p className="text-sm text-gray-600">Chart will be displayed here</p>
                 </div>
-                <div className="text-center py-12 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="text-center py-12 bg-gray-50 rounded-lg">
                   <FiCalendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">30-Day Trend</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Chart will be displayed here</p>
+                  <h4 className="font-medium text-gray-900 mb-2">30-Day Trend</h4>
+                  <p className="text-sm text-gray-600">Chart will be displayed here</p>
                 </div>
               </div>
             </div>

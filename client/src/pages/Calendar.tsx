@@ -7,7 +7,6 @@ import {
   FiPlus,
   FiPackage,
   FiClock,
-  FiHeart,
   FiActivity,
   FiArrowLeft
 } from 'react-icons/fi'
@@ -89,11 +88,11 @@ export const Calendar: React.FC = () => {
 
   const getEventColor = (type: string) => {
     switch (type) {
-      case 'medication': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-      case 'appointment': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-      case 'exercise': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-      case 'reminder': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+      case 'medication': return 'bg-blue-100 text-blue-800'
+      case 'appointment': return 'bg-green-100 text-green-800'
+      case 'exercise': return 'bg-purple-100 text-purple-800'
+      case 'reminder': return 'bg-orange-100 text-orange-800'
+      default: return 'bg-gray-100 text-gray-800'
     }
   }
 
@@ -132,10 +131,6 @@ export const Calendar: React.FC = () => {
     return days
   }
 
-  const formatDate = (date: Date) => {
-    return date.toISOString().split('T')[0]
-  }
-
   const isToday = (day: number) => {
     const today = new Date()
     return (
@@ -161,11 +156,11 @@ export const Calendar: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
-              <Link to="/patient/dashboard" className="mr-4 p-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100">
+              <Link to="/patient/dashboard" className="mr-4 p-2 text-gray-600 hover:text-gray-900">
                 <FiArrowLeft className="h-5 w-5" />
               </Link>
               <FiCalendar className="h-8 w-8 text-primary-500" />
-              <h1 className="ml-2 text-2xl font-bold text-gray-900 dark:text-gray-100">Health Calendar</h1>
+              <h1 className="ml-2 text-2xl font-bold text-gray-900">Health Calendar</h1>
             </div>
             <div className="flex items-center space-x-4">
               <button className="btn btn-primary btn-md inline-flex items-center">
@@ -188,7 +183,7 @@ export const Calendar: React.FC = () => {
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   view === viewType
                     ? 'bg-primary-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 {viewType.charAt(0).toUpperCase() + viewType.slice(1)}
@@ -199,29 +194,29 @@ export const Calendar: React.FC = () => {
 
         {/* Calendar Header */}
         <div className="card mb-6">
-          <div className="card-content">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          <div className=" p-4 ">
+            <div className="flex justify-between py-2 flex-row h-full items-center">
+              <h2 className="text-2xl font-bold text-gray-900">
                 {months[currentDate.getMonth()]} {currentDate.getFullYear()}
               </h2>
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => navigateMonth('prev')}
-                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="p-2 rounded-lg hover:bg-gray-100"
                 >
-                  <FiChevronLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                  <FiChevronLeft className="h-5 w-5 text-gray-600" />
                 </button>
                 <button
                   onClick={() => setCurrentDate(new Date())}
-                  className="px-4 py-2 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+                  className="px-4 py-2 text-sm font-medium text-primary-600 hover:text-primary-700"
                 >
                   Today
                 </button>
                 <button
                   onClick={() => navigateMonth('next')}
-                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="p-2 rounded-lg hover:bg-gray-100"
                 >
-                  <FiChevronRight className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                  <FiChevronRight className="h-5 w-5 text-gray-600" />
                 </button>
               </div>
             </div>
@@ -234,11 +229,11 @@ export const Calendar: React.FC = () => {
             <div className="card">
               <div className="card-content p-0">
                 {/* Days of week header */}
-                <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
+                <div className="grid grid-cols-7 border-b border-gray-200">
                   {days.map((day) => (
                     <div
                       key={day}
-                      className="p-4 text-center text-sm font-medium text-gray-500 dark:text-gray-400"
+                      className="p-4 text-center text-sm font-semibold text-gray-700"
                     >
                       {day}
                     </div>
@@ -258,13 +253,13 @@ export const Calendar: React.FC = () => {
                     return (
                       <div
                         key={`${currentDate.getFullYear()}-${currentDate.getMonth()}-${day}-${index}`}
-                        className={`p-2 min-h-24 border-r border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                          isToday(day) ? 'bg-primary-50 dark:bg-primary-900' : ''
+                        className={`p-2 min-h-24 border-r border-b border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors bg-white ${
+                          isToday(day) ? 'bg-primary-50' : ''
                         } ${isSelected(day) ? 'ring-2 ring-primary-500' : ''}`}
                         onClick={() => setSelectedDate(dateStr)}
                       >
-                        <div className={`text-sm font-medium mb-1 ${
-                          isToday(day) ? 'text-primary-600 dark:text-primary-400' : 'text-gray-900 dark:text-gray-100'
+                        <div className={`text-sm font-bold mb-1 ${
+                          isToday(day) ? 'text-primary-600' : 'text-gray-800'
                         }`}>
                           {day}
                         </div>
@@ -282,7 +277,7 @@ export const Calendar: React.FC = () => {
                             )
                           })}
                           {dayEvents.length > 2 && (
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                            <div className="text-xs text-gray-500">
                               +{dayEvents.length - 2} more
                             </div>
                           )}
@@ -335,14 +330,14 @@ export const Calendar: React.FC = () => {
                         )
                       })
                     ) : (
-                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                      <div className="text-center py-8 text-gray-500">
                         <FiCalendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
                         <p>No events scheduled for this date</p>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <div className="text-center py-8 text-gray-500">
                     <FiCalendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>Click on a date to view events</p>
                   </div>

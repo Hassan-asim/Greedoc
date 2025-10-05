@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import LOGO from "../../public/logo.png"
 import { 
   FiHome, 
   FiFileText, 

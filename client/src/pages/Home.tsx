@@ -14,49 +14,100 @@ export const Home: React.FC = () => {
 
   return (
     <>
-      <div className="min-h-screen h-screen relative">
-        {/* Background image for the hero section */}
+      <div className="min-h-screen w-full bg-white relative">
+          <div
+    className="absolute inset-0 z-0"
+    style={{
+      backgroundImage: `
+        radial-gradient(125% 125% at 50% 90%, #ffffff 40%, #10b981 100%)
+      `,
+      backgroundSize: "100% 100%",
+    }}
+  />
 
-        <section className="h-full relative">
+        <section className="h-full relative z-10">
           <div className="absolute top-0 left-0 w-full z-20 pt-3">
             <Navbar />
           </div>
           <div
-            className="max-w-7xl mx-auto px-4 xl:px-0 grid lg:grid-cols-2 lg:gap-x-20 xl:gap-x-40 pt-24 lg:pt-28 h-full items-center"
+            className="max-w-7xl mx-auto px-4 xl:px-0 grid lg:grid-cols-2 lg:gap-x-20 xl:gap-x-40 pt-24 lg:pt-28 h-full items-center min-h-screen"
           >
-            <div className="lg:block hidden"></div>
+            {/* Logo with heartbeat animation - visible on desktop */}
+            <div className="lg:flex hidden justify-center items-center">
+              <div 
+                className="heartbeat-animation"
+                style={{
+                  animation: 'heartbeat 2s ease-in-out infinite'
+                }}
+              >
+                <img 
+                  src="/logo.png" 
+                  alt="Greedoc Logo" 
+                  className="h-56 w-56 drop-shadow-2xl object-contain"
+                />
+              </div>
+            </div>
+            
+            {/* Logo with heartbeat animation - visible on mobile, positioned above text */}
+            <div className="lg:hidden flex justify-center items-center mb-8">
+              <div 
+                className="heartbeat-animation"
+                style={{
+                  animation: 'heartbeat 2s ease-in-out infinite'
+                }}
+              >
+                <img 
+                  src="/logo.png" 
+                  alt="Greedoc Logo" 
+                  className="h-[140px] drop-shadow-2xl object-contain"
+                />
+              </div>
+            </div>
+            
             <div className="flex flex-col items-start lg:items-start items-center text-center lg:text-left lg:mt-0 justify-center h-full lg:h-auto">
               <div
-                className="items-center justify-center rounded-full text-sm font-medium whitespace-nowrap shadow-[0_2px_10px_0px_rgba(0,0,0,0.15)] inline-flex bg-green-900 text-white px-2.5 py-1"
+                className="items-center justify-center rounded-full text-lg font-medium whitespace-nowrap shadow-[0_2px_10px_0px_rgba(0,0,0,0.15)] inline-flex bg-green-900 text-white px-2.5 py-1"
               >
                 Introducing  Health Twin App
               </div>
               <div
-                className="text-3xl font-semibold text-white text-slate-700 lg:text-5xl mt-3 lg:mt-4 lg:leading-tight"
+                className="text-3xl font-semibold text-slate-900 lg:text-6xl mt-3 lg:mt-4 lg:leading-tight"
               >
                 Everything You Need for Better Health
               </div>
               <p
-                className="mt-3 text-sm font-medium lg:text-slate-600 sm:w-2/3 md:w-11/12 lg:mt-4 xl:w-3/4"
+                className="mt-3 text-lg font-medium text-slate-600 sm:w-2/3 md:w-11/12 lg:mt-4 xl:w-3/4"
               >
                 Our comprehensive platform combines cutting-edge AI with user-friendly design
                 to help you manage your health effectively.
               </p>
             </div>
           </div>
-          <img
-            className="absolute left-0 top-0 h-full w-full object-cover lg:w-1/2 -z-10"
-            src="https://tailkits.com/ui/iframe/assets/img/bg-10.png"
-            alt="Features"
-          />
-          {/* Mobile overlay for better text readability */}
-          <div className="absolute inset-0 bg-black/20 lg:bg-transparent lg:w-1/2 -z-5"></div>
         </section>
       </div>
 
-
-
-
+      {/* CSS for heartbeat animation */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes heartbeat {
+            0% {
+              transform: scale(1);
+            }
+            14% {
+              transform: scale(1.15);
+            }
+            28% {
+              transform: scale(1);
+            }
+            42% {
+              transform: scale(1.15);
+            }
+            70% {
+              transform: scale(1);
+            }
+          }
+        `
+      }} />
 
       <section className="py-20 ">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -437,49 +488,62 @@ export const Home: React.FC = () => {
       </section>
 
 
+<div className="w-full relative">
+  {/* Emerald Glow Background */}
+  <div
+    className="absolute inset-0 z-0"
+    style={{
+      backgroundImage: `
+        radial-gradient(125% 125% at 50% 10%, #ffffff 40%, #10b981 100%)
+      `,
+      backgroundSize: "100% 100%",
+    }}
+  />
 
-      <footer  className="bg-green-900 text-white py-12">
+      <footer className="relative z-10 text-gray-900 py-12">
+        
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center mb-4">
-                <FiHeart className="h-6 w-6 text-primary-400" />
-                <h3 className="ml-2 text-lg font-bold">Greedoc</h3>
+                <FiHeart className="h-6 w-6 text-emerald-600" />
+                <h3 className="ml-2 text-lg font-bold text-gray-900">Greedoc</h3>
               </div>
-              <p className="text-gray-200">
+              <p className="text-gray-700">
                 Your AI-powered health companion for better wellness management.
               </p>
             </div>
             <div>
-              <h4 className="text-lg font-semibold mb-4">Product</h4>
-              <ul className="space-y-2 text-gray-200">
-                <li><a href="#" className="hover:text-white">Features</a></li>
-                <li><a href="#" className="hover:text-white">Pricing</a></li>
-                <li><a href="#" className="hover:text-white">Security</a></li>
+              <h4 className="text-lg font-semibold mb-4 text-gray-900">Product</h4>
+              <ul className="space-y-2 text-gray-700">
+                <li><a href="#" className="hover:text-emerald-600 transition-colors">Features</a></li>
+                <li><a href="#" className="hover:text-emerald-600 transition-colors">Pricing</a></li>
+                <li><a href="#" className="hover:text-emerald-600 transition-colors">Security</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-lg font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-gray-200">
-                <li><a href="#" className="hover:text-white">Help Center</a></li>
-                <li><a href="#" className="hover:text-white">Contact Us</a></li>
-                <li><a href="#" className="hover:text-white">Privacy Policy</a></li>
+              <h4 className="text-lg font-semibold mb-4 text-gray-900">Support</h4>
+              <ul className="space-y-2 text-gray-700">
+                <li><a href="#" className="hover:text-emerald-600 transition-colors">Help Center</a></li>
+                <li><a href="#" className="hover:text-emerald-600 transition-colors">Contact Us</a></li>
+                <li><a href="#" className="hover:text-emerald-600 transition-colors">Privacy Policy</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-lg font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-gray-200">
-                <li><a href="#" className="hover:text-white">About</a></li>
-                <li><a href="#" className="hover:text-white">Blog</a></li>
-                <li><a href="#" className="hover:text-white">Careers</a></li>
+              <h4 className="text-lg font-semibold mb-4 text-gray-900">Company</h4>
+              <ul className="space-y-2 text-gray-700">
+                <li><a href="#" className="hover:text-emerald-600 transition-colors">About</a></li>
+                <li><a href="#" className="hover:text-emerald-600 transition-colors">Blog</a></li>
+                <li><a href="#" className="hover:text-emerald-600 transition-colors">Careers</a></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-200">
+          <div className="border-t border-gray-400 mt-8 pt-8 text-center text-gray-700">
             <p>&copy; 2025 Greedoc. All rights reserved.</p>
           </div>
         </div>
       </footer>
+</div>
     </>
   )
 }

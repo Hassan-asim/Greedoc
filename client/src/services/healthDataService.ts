@@ -1,13 +1,24 @@
 import api from './api';
 
-export interface HealthData {
-  id: string;
-  patientId: string;
-  type: 'steps' | 'heart_rate' | 'sleep' | 'blood_pressure' | 'weight' | 'temperature';
+export interface HealthMetric {
   value: number | string;
   unit: string;
   timestamp: string;
   notes?: string;
+}
+
+export interface HealthData {
+  id: string;
+  patientId: string;
+  healthMetrics: {
+    heartRate?: HealthMetric;
+    steps?: HealthMetric;
+    sleep?: HealthMetric;
+    bloodPressure?: HealthMetric;
+    weight?: HealthMetric;
+    temperature?: HealthMetric;
+  };
+  lastUpdated: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -26,6 +37,17 @@ export interface UpdateHealthDataData {
   unit?: string;
   timestamp?: string;
   notes?: string;
+}
+
+export interface BulkHealthDataUpdate {
+  healthMetrics: {
+    heartRate?: HealthMetric;
+    steps?: HealthMetric;
+    sleep?: HealthMetric;
+    bloodPressure?: HealthMetric;
+    weight?: HealthMetric;
+    temperature?: HealthMetric;
+  };
 }
 
 export interface HealthDataFilters {
@@ -88,6 +110,14 @@ class HealthDataService {
    */
   async updateHealthData(id: string, data: UpdateHealthDataData) {
     const response = await api.put(`/health-data/${id}`, data);
+    return response.data;
+  }
+
+  /**
+   * Update multiple health metrics at once
+   */
+  async updateBulkHealthData(data: BulkHealthDataUpdate) {
+    const response = await api.put('/health-data/bulk', data);
     return response.data;
   }
 

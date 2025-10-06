@@ -5,11 +5,17 @@ class HealthData {
   constructor(data) {
     this.id = data.id || null;
     this.patientId = data.patientId || "";
-    this.type = data.type || ""; // steps, heart_rate, sleep, blood_pressure, weight, temperature
-    this.value = data.value || 0;
-    this.unit = data.unit || "";
-    this.timestamp = data.timestamp ? new Date(data.timestamp) : new Date();
-    this.notes = data.notes || "";
+    this.healthMetrics = data.healthMetrics || {
+      heartRate: null,
+      steps: null,
+      sleep: null,
+      bloodPressure: null,
+      weight: null,
+      temperature: null,
+    };
+    this.lastUpdated = data.lastUpdated
+      ? new Date(data.lastUpdated)
+      : new Date();
     this.createdAt = data.createdAt ? new Date(data.createdAt) : new Date();
     this.updatedAt = data.updatedAt ? new Date(data.updatedAt) : new Date();
   }
@@ -30,156 +36,176 @@ class HealthData {
   }
 
   // Static methods for database operations
-  static async create(data) {
+  static async createOrUpdate(data) {
     try {
-      console.log("Creating health data:", data);
+      console.log("Creating/updating health data:", data);
 
-      const healthData = {
-        patientId: data.patientId,
-        type: data.type,
-        value: data.value,
-        unit: data.unit,
-        timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
-        notes: data.notes || "",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const { patientId, type, value, unit, timestamp, notes } = data;
+      const now = new Date();
 
       try {
-        // Try to create document in Firestore
-        const docRef = await db.collection("healthData").add(healthData);
+        // Check if patient health data already exists
+        const patientDoc = await db
+          .collection("patientHealthData")
+          .doc(patientId)
+          .get();
 
-        console.log("Health data created with ID:", docRef.id);
+        let healthData;
+        if (patientDoc.exists) {
+          // Update existing document
+          const existingData = patientDoc.data();
+          healthData = new HealthData({
+            id: patientId,
+            ...existingData,
+            healthMetrics: {
+              ...existingData.healthMetrics,
+              [type]: {
+                value: value,
+                unit: unit,
+                timestamp: timestamp ? new Date(timestamp) : now,
+                notes: notes || "",
+              },
+            },
+            lastUpdated: now,
+            updatedAt: now,
+          });
+        } else {
+          // Create new document
+          const healthMetrics = {};
+          healthMetrics[type] = {
+            value: value,
+            unit: unit,
+            timestamp: timestamp ? new Date(timestamp) : now,
+            notes: notes || "",
+          };
 
-        const createdData = new HealthData({
-          id: docRef.id,
-          ...healthData,
-        });
+          healthData = new HealthData({
+            id: patientId,
+            patientId: patientId,
+            healthMetrics: healthMetrics,
+            lastUpdated: now,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
 
-        console.log("Health data created successfully:", createdData);
-        return createdData;
+        // Save to Firestore
+        await db
+          .collection("patientHealthData")
+          .doc(patientId)
+          .set(healthData.toObject());
+
+        console.log("Health data created/updated successfully:", healthData);
+        return healthData;
       } catch (firebaseError) {
         console.log(
           "Firebase not configured, using mock storage:",
           firebaseError.message
         );
 
-        // Fallback to mock storage with persistent simulation
-        const mockId = `health_${Date.now()}_${Math.random()
-          .toString(36)
-          .substr(2, 9)}`;
-        const createdData = new HealthData({
-          id: mockId,
-          ...healthData,
-        });
-
-        // Store in memory for this session (simulates database)
-        if (!global.mockHealthData) {
-          global.mockHealthData = new Map();
+        // Fallback to mock storage
+        if (!global.mockPatientHealthData) {
+          global.mockPatientHealthData = new Map();
         }
-        global.mockHealthData.set(mockId, createdData.toObject());
 
-        console.log("Health data created (mock):", createdData);
-        return createdData;
+        const existingData = global.mockPatientHealthData.get(patientId);
+        let healthData;
+
+        if (existingData) {
+          // Update existing
+          healthData = new HealthData({
+            id: patientId,
+            ...existingData,
+            healthMetrics: {
+              ...existingData.healthMetrics,
+              [type]: {
+                value: value,
+                unit: unit,
+                timestamp: timestamp ? new Date(timestamp) : now,
+                notes: notes || "",
+              },
+            },
+            lastUpdated: now,
+            updatedAt: now,
+          });
+        } else {
+          // Create new
+          const healthMetrics = {};
+          healthMetrics[type] = {
+            value: value,
+            unit: unit,
+            timestamp: timestamp ? new Date(timestamp) : now,
+            notes: notes || "",
+          };
+
+          healthData = new HealthData({
+            id: patientId,
+            patientId: patientId,
+            healthMetrics: healthMetrics,
+            lastUpdated: now,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+
+        global.mockPatientHealthData.set(patientId, healthData.toObject());
+        console.log("Health data created/updated (mock):", healthData);
+        return healthData;
       }
     } catch (error) {
-      console.error("Error creating health data:", error);
-      throw new Error(`Error creating health data: ${error.message}`);
+      console.error("Error creating/updating health data:", error);
+      throw new Error(`Error creating/updating health data: ${error.message}`);
     }
   }
 
   static async findByPatientId(patientId, options = {}) {
     try {
-      const {
-        page = 1,
-        limit = 20,
-        type = null,
-        startDate = null,
-        endDate = null,
-        orderBy = "timestamp",
-        orderDirection = "desc",
-      } = options;
-
       console.log("Finding health data for patient:", patientId, options);
 
       try {
-        // Build Firestore query
-        let query = db
-          .collection("healthData")
-          .where("patientId", "==", patientId);
-
-        // Add type filter if specified
-        if (type) {
-          query = query.where("type", "==", type);
-        }
-
-        // Add date range filters if specified
-        if (startDate) {
-          query = query.where("timestamp", ">=", new Date(startDate));
-        }
-        if (endDate) {
-          query = query.where("timestamp", "<=", new Date(endDate));
-        }
-
-        // Add ordering
-        query = query.orderBy(orderBy, orderDirection);
-
-        // Add pagination
-        const offset = (page - 1) * limit;
-        if (offset > 0) {
-          // For pagination, we need to get documents to skip
-          const skipQuery = query.limit(offset);
-          const skipSnapshot = await skipQuery.get();
-          if (!skipSnapshot.empty) {
-            const lastDoc = skipSnapshot.docs[skipSnapshot.docs.length - 1];
-            query = query.startAfter(lastDoc);
-          }
-        }
-
-        // Execute query with limit
-        const snapshot = await query.limit(limit).get();
-
-        // Get total count for pagination (without limit)
-        const countSnapshot = await db
-          .collection("healthData")
-          .where("patientId", "==", patientId)
+        // Get the patient's consolidated health data document
+        const patientDoc = await db
+          .collection("patientHealthData")
+          .doc(patientId)
           .get();
 
-        const healthData = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          healthData.push(
-            new HealthData({
-              id: doc.id,
-              ...data,
-              timestamp: data.timestamp?.toDate
-                ? data.timestamp.toDate()
-                : data.timestamp,
-              createdAt: data.createdAt?.toDate
-                ? data.createdAt.toDate()
-                : data.createdAt,
-              updatedAt: data.updatedAt?.toDate
-                ? data.updatedAt.toDate()
-                : data.updatedAt,
-            })
-          );
+        if (!patientDoc.exists) {
+          return {
+            data: [],
+            total: 0,
+            page: 1,
+            limit: 20,
+            totalPages: 0,
+          };
+        }
+
+        const patientData = patientDoc.data();
+        const healthData = new HealthData({
+          id: patientId,
+          ...patientData,
+          lastUpdated: patientData.lastUpdated?.toDate
+            ? patientData.lastUpdated.toDate()
+            : patientData.lastUpdated,
+          createdAt: patientData.createdAt?.toDate
+            ? patientData.createdAt.toDate()
+            : patientData.createdAt,
+          updatedAt: patientData.updatedAt?.toDate
+            ? patientData.updatedAt.toDate()
+            : patientData.updatedAt,
         });
 
         console.log("Health data found:", {
-          total: countSnapshot.size,
-          page,
-          limit,
-          data: healthData.length,
           patientId,
-          sampleData: healthData.slice(0, 2),
+          hasData: !!healthData.healthMetrics,
+          metrics: Object.keys(healthData.healthMetrics || {}),
         });
 
         return {
-          data: healthData,
-          total: countSnapshot.size,
-          page,
-          limit,
-          totalPages: Math.ceil(countSnapshot.size / limit),
+          data: [healthData],
+          total: 1,
+          page: 1,
+          limit: 1,
+          totalPages: 1,
         };
       } catch (firebaseError) {
         console.log(
@@ -188,61 +214,34 @@ class HealthData {
         );
 
         // Fallback to mock storage
-        if (!global.mockHealthData) {
-          global.mockHealthData = new Map();
+        if (!global.mockPatientHealthData) {
+          global.mockPatientHealthData = new Map();
         }
 
-        // Get all mock data for this patient
-        const allMockData = Array.from(global.mockHealthData.values()).filter(
-          (item) => item.patientId === patientId
-        );
-
-        // Apply filters
-        let filteredData = allMockData;
-        if (type) {
-          filteredData = filteredData.filter((item) => item.type === type);
-        }
-        if (startDate) {
-          const start = new Date(startDate);
-          filteredData = filteredData.filter(
-            (item) => new Date(item.timestamp) >= start
-          );
-        }
-        if (endDate) {
-          const end = new Date(endDate);
-          filteredData = filteredData.filter(
-            (item) => new Date(item.timestamp) <= end
-          );
+        const mockData = global.mockPatientHealthData.get(patientId);
+        if (!mockData) {
+          return {
+            data: [],
+            total: 0,
+            page: 1,
+            limit: 20,
+            totalPages: 0,
+          };
         }
 
-        // Sort data
-        filteredData.sort((a, b) => {
-          const aTime = new Date(a.timestamp).getTime();
-          const bTime = new Date(b.timestamp).getTime();
-          return orderDirection === "desc" ? bTime - aTime : aTime - bTime;
-        });
-
-        // Apply pagination
-        const startIndex = (page - 1) * limit;
-        const endIndex = startIndex + limit;
-        const paginatedData = filteredData.slice(startIndex, endIndex);
-
+        const healthData = new HealthData(mockData);
         console.log("Health data found (mock):", {
-          total: filteredData.length,
           patientId,
-          allMockDataCount: allMockData.length,
-          sampleData: paginatedData.slice(0, 2),
-          page,
-          limit,
-          data: paginatedData.length,
+          hasData: !!healthData.healthMetrics,
+          metrics: Object.keys(healthData.healthMetrics || {}),
         });
 
         return {
-          data: paginatedData.map((item) => new HealthData(item)),
-          total: filteredData.length,
-          page,
-          limit,
-          totalPages: Math.ceil(filteredData.length / limit),
+          data: [healthData],
+          total: 1,
+          page: 1,
+          limit: 1,
+          totalPages: 1,
         };
       }
     } catch (error) {
@@ -256,7 +255,7 @@ class HealthData {
       console.log("Finding health data by ID:", id);
 
       try {
-        const doc = await db.collection("healthData").doc(id).get();
+        const doc = await db.collection("patientHealthData").doc(id).get();
 
         if (!doc.exists) {
           return null;
@@ -266,9 +265,9 @@ class HealthData {
         const healthData = new HealthData({
           id: doc.id,
           ...data,
-          timestamp: data.timestamp?.toDate
-            ? data.timestamp.toDate()
-            : data.timestamp,
+          lastUpdated: data.lastUpdated?.toDate
+            ? data.lastUpdated?.toDate()
+            : data.lastUpdated,
           createdAt: data.createdAt?.toDate
             ? data.createdAt.toDate()
             : data.createdAt,
@@ -286,11 +285,11 @@ class HealthData {
         );
 
         // Fallback to mock storage
-        if (!global.mockHealthData) {
-          global.mockHealthData = new Map();
+        if (!global.mockPatientHealthData) {
+          global.mockPatientHealthData = new Map();
         }
 
-        const mockData = global.mockHealthData.get(id);
+        const mockData = global.mockPatientHealthData.get(id);
         if (!mockData) {
           return null;
         }
@@ -313,11 +312,8 @@ class HealthData {
 
       const updateData = {
         patientId: this.patientId,
-        type: this.type,
-        value: this.value,
-        unit: this.unit,
-        timestamp: this.timestamp,
-        notes: this.notes,
+        healthMetrics: this.healthMetrics,
+        lastUpdated: this.lastUpdated,
         createdAt: this.createdAt,
         updatedAt: this.updatedAt,
       };
@@ -325,12 +321,15 @@ class HealthData {
       try {
         if (this.id) {
           // Update existing document
-          await db.collection("healthData").doc(this.id).update(updateData);
+          await db.collection("patientHealthData").doc(this.id).set(updateData);
           console.log("Health data updated successfully:", this.id);
         } else {
           // Create new document
-          const docRef = await db.collection("healthData").add(updateData);
-          this.id = docRef.id;
+          const docRef = await db
+            .collection("patientHealthData")
+            .doc(this.patientId);
+          this.id = this.patientId;
+          await docRef.set(updateData);
           console.log("Health data created successfully:", this.id);
         }
 
@@ -342,21 +341,18 @@ class HealthData {
         );
 
         // Fallback to mock storage
-        if (!global.mockHealthData) {
-          global.mockHealthData = new Map();
+        if (!global.mockPatientHealthData) {
+          global.mockPatientHealthData = new Map();
         }
 
         if (this.id) {
           // Update existing mock data
-          global.mockHealthData.set(this.id, this.toObject());
+          global.mockPatientHealthData.set(this.id, this.toObject());
           console.log("Health data updated (mock):", this.id);
         } else {
           // Create new mock data
-          const mockId = `health_${Date.now()}_${Math.random()
-            .toString(36)
-            .substr(2, 9)}`;
-          this.id = mockId;
-          global.mockHealthData.set(mockId, this.toObject());
+          this.id = this.patientId;
+          global.mockPatientHealthData.set(this.id, this.toObject());
           console.log("Health data created (mock):", this.id);
         }
 
@@ -377,7 +373,7 @@ class HealthData {
       }
 
       try {
-        await db.collection("healthData").doc(this.id).delete();
+        await db.collection("patientHealthData").doc(this.id).delete();
         console.log("Health data deleted successfully:", this.id);
         return true;
       } catch (firebaseError) {
@@ -387,11 +383,11 @@ class HealthData {
         );
 
         // Fallback to mock storage
-        if (!global.mockHealthData) {
-          global.mockHealthData = new Map();
+        if (!global.mockPatientHealthData) {
+          global.mockPatientHealthData = new Map();
         }
 
-        global.mockHealthData.delete(this.id);
+        global.mockPatientHealthData.delete(this.id);
         console.log("Health data deleted (mock):", this.id);
         return true;
       }
@@ -405,11 +401,8 @@ class HealthData {
     return {
       id: this.id,
       patientId: this.patientId,
-      type: this.type,
-      value: this.value,
-      unit: this.unit,
-      timestamp: this.timestamp,
-      notes: this.notes,
+      healthMetrics: this.healthMetrics,
+      lastUpdated: this.lastUpdated,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };

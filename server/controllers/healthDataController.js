@@ -125,7 +125,7 @@ class HealthDataController {
 
   /**
    * @route   POST /api/health-data
-   * @desc    Create new health data entry
+   * @desc    Create or update health data entry
    * @access  Private (Patient only)
    */
   static async createHealthData(req, res) {
@@ -142,7 +142,7 @@ class HealthDataController {
       const userId = req.user._id || req.user.id;
       const userRole = req.user.role;
 
-      console.log("Creating health data for user:", {
+      console.log("Creating/updating health data for user:", {
         userId,
         userRole,
         body: req.body,
@@ -158,7 +158,7 @@ class HealthDataController {
 
       const { type, value, unit, timestamp, notes } = req.body;
 
-      const healthData = await HealthData.create({
+      const healthData = await HealthData.createOrUpdate({
         patientId: userId,
         type,
         value,
@@ -169,7 +169,7 @@ class HealthDataController {
 
       res.status(201).json({
         status: "success",
-        message: "Health data created successfully",
+        message: "Health data updated successfully",
         data: {
           healthData: healthData.toObject(),
         },
@@ -186,7 +186,7 @@ class HealthDataController {
 
   /**
    * @route   PUT /api/health-data/:id
-   * @desc    Update health data entry
+   * @desc    Update specific health metric
    * @access  Private (Patient only)
    */
   static async updateHealthData(req, res) {
@@ -214,33 +214,24 @@ class HealthDataController {
         });
       }
 
-      const healthData = await HealthData.findById(id);
-
-      if (!healthData) {
-        return res.status(404).json({
-          status: "error",
-          message: "Health data not found",
-        });
-      }
-
       // Verify the health data belongs to the patient
-      if (healthData.patientId !== userId) {
+      if (id !== userId) {
         return res.status(403).json({
           status: "error",
           message: "Access denied",
         });
       }
 
-      // Update fields
       const { type, value, unit, timestamp, notes } = req.body;
-      if (type) healthData.type = type;
-      if (value !== undefined) healthData.value = value;
-      if (unit) healthData.unit = unit;
-      if (timestamp) healthData.timestamp = new Date(timestamp);
-      if (notes !== undefined) healthData.notes = notes;
 
-      // Save the updated health data to Firebase
-      await healthData.save();
+      const healthData = await HealthData.createOrUpdate({
+        patientId: userId,
+        type,
+        value,
+        unit,
+        timestamp: timestamp || new Date().toISOString(),
+        notes: notes || "",
+      });
 
       res.json({
         status: "success",
@@ -251,6 +242,101 @@ class HealthDataController {
       });
     } catch (error) {
       console.error("Update health data error:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Failed to update health data",
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * @route   PUT /api/health-data/bulk
+   * @desc    Update multiple health metrics at once
+   * @access  Private (Patient only)
+   */
+  static async updateBulkHealthData(req, res) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          status: "error",
+          message: "Validation failed",
+          errors: errors.array(),
+        });
+      }
+
+      const userId = req.user._id || req.user.id;
+      const userRole = req.user.role;
+
+      console.log("Updating bulk health data for user:", {
+        userId,
+        userRole,
+        body: req.body,
+      });
+
+      // Only patients can update their own health data
+      if (userRole !== "patient") {
+        return res.status(403).json({
+          status: "error",
+          message: "Only patients can update health data",
+        });
+      }
+
+      const { healthMetrics } = req.body;
+
+      if (!healthMetrics || typeof healthMetrics !== "object") {
+        return res.status(400).json({
+          status: "error",
+          message: "Health metrics object is required",
+        });
+      }
+
+      // Get existing health data
+      let existingHealthData = await HealthData.findById(userId);
+
+      if (!existingHealthData) {
+        // Create new health data document
+        existingHealthData = new HealthData({
+          id: userId,
+          patientId: userId,
+          healthMetrics: {},
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          lastUpdated: new Date(),
+        });
+      }
+
+      // Update each metric
+      const now = new Date();
+      for (const [type, metricData] of Object.entries(healthMetrics)) {
+        if (metricData && typeof metricData === "object") {
+          existingHealthData.healthMetrics[type] = {
+            value: metricData.value,
+            unit: metricData.unit || "",
+            timestamp: metricData.timestamp
+              ? new Date(metricData.timestamp)
+              : now,
+            notes: metricData.notes || "",
+          };
+        }
+      }
+
+      existingHealthData.lastUpdated = now;
+      existingHealthData.updatedAt = now;
+
+      // Save the updated health data
+      await existingHealthData.save();
+
+      res.json({
+        status: "success",
+        message: "Health data updated successfully",
+        data: {
+          healthData: existingHealthData.toObject(),
+        },
+      });
+    } catch (error) {
+      console.error("Update bulk health data error:", error);
       res.status(500).json({
         status: "error",
         message: "Failed to update health data",

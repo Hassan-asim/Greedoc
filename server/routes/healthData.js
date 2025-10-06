@@ -65,7 +65,7 @@ router.post(
 
 /**
  * @route   PUT /api/health-data/:id
- * @desc    Update health data entry
+ * @desc    Update specific health metric
  * @access  Private (Patient only)
  */
 router.put(
@@ -96,6 +96,22 @@ router.put(
       .withMessage("Notes cannot exceed 500 characters"),
   ],
   HealthDataController.updateHealthData
+);
+
+/**
+ * @route   PUT /api/health-data/bulk
+ * @desc    Update multiple health metrics at once
+ * @access  Private (Patient only)
+ */
+router.put(
+  "/bulk",
+  authenticateToken,
+  [
+    body("healthMetrics")
+      .isObject()
+      .withMessage("Health metrics object is required"),
+  ],
+  HealthDataController.updateBulkHealthData
 );
 
 /**

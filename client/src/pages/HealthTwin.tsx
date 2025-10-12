@@ -124,7 +124,26 @@ export const HealthTwin: React.FC = () => {
         return
       }
       
+      console.log('Loading recent health data for user:', user._id)
       const response = await healthDataService.getRecentHealthData(10)
+      console.log('Health data response:', response)
+      console.log('Health data entries:', response.data.healthData)
+      
+      // Debug timestamp handling
+      if (response.data.healthData && response.data.healthData.length > 0) {
+        console.log('Timestamp debugging:')
+        response.data.healthData.forEach((entry, index) => {
+          console.log(`Entry ${index + 1}:`, {
+            type: entry.type,
+            value: entry.value,
+            timestamp: entry.timestamp,
+            timestampType: typeof entry.timestamp,
+            isDate: entry.timestamp instanceof Date,
+            dateString: entry.timestamp instanceof Date ? entry.timestamp.toISOString() : new Date(entry.timestamp).toISOString()
+          })
+        })
+      }
+      
       setRecentData(response.data.healthData || [])
     } catch (error: any) {
       console.error('Error loading recent health data:', error)
@@ -179,21 +198,37 @@ export const HealthTwin: React.FC = () => {
 
     setIsSaving(true)
     try {
+      const now = new Date();
       const healthData: CreateHealthDataData = {
         type: selectedMetric.type,
         value: selectedMetric.type === 'blood_pressure' ? inputValue : parseFloat(inputValue),
         unit: selectedMetric.unit,
-        timestamp: new Date().toISOString(),
+        timestamp: now.toISOString(),
         notes: notes || undefined
       }
+      
+      console.log('Saving health data with timestamp:', {
+        timestamp: healthData.timestamp,
+        timestampType: typeof healthData.timestamp,
+        now: now.toISOString()
+      })
+
+      console.log('User info:', {
+        id: user._id,
+        role: user.role,
+        email: user.email
+      })
 
       if (editingData) {
         // Update existing data
+        console.log('Updating existing health data:', editingData.id)
         await healthDataService.updateHealthData(editingData.id, healthData)
         toast.success('Health data updated successfully!')
       } else {
         // Create new data
-        await healthDataService.createHealthData(healthData)
+        console.log('Creating new health data:', healthData)
+        const response = await healthDataService.createHealthData(healthData)
+        console.log('Health data creation response:', response)
         toast.success('Health data saved successfully!')
       }
       
@@ -202,9 +237,16 @@ export const HealthTwin: React.FC = () => {
       setInputValue('')
       setNotes('')
       setEditingData(null)
+      console.log('Reloading data after save...')
       await loadRecentData()
     } catch (error: any) {
       console.error('Error saving health data:', error)
+      console.error('Error details:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+        statusText: error?.response?.statusText
+      })
       toast.error(`Failed to save health data: ${error?.response?.data?.message || error?.message || 'Unknown error'}`)
     } finally {
       setIsSaving(false)
@@ -483,14 +525,18 @@ export const HealthTwin: React.FC = () => {
                                   {data.value} {data.unit}
                                 </h4>
                                 <p className="text-sm text-gray-800 dark:text-gray-300">
-                                  {new Date(data.timestamp).toLocaleDateString()}
+                                  {data.timestamp instanceof Date 
+                                    ? data.timestamp.toLocaleDateString() 
+                                    : new Date(data.timestamp).toLocaleDateString()}
                                 </p>
                               </div>
                             </div>
                             <div className="flex items-center space-x-2">
                               <div className="text-right">
                                 <p className="text-xs text-gray-800 dark:text-gray-300">
-                                  {new Date(data.timestamp).toLocaleTimeString()}
+                                  {data.timestamp instanceof Date 
+                                    ? data.timestamp.toLocaleTimeString() 
+                                    : new Date(data.timestamp).toLocaleTimeString()}
                                 </p>
                               </div>
                               <div className="flex space-x-1">

@@ -50,7 +50,7 @@ class HealthDataController {
       res.json({
         status: "success",
         data: {
-          healthData: result.data.map((item) => item.toObject()),
+          healthData: result.data, // Data is already in the correct format
           pagination: {
             page: result.page,
             limit: result.limit,
@@ -149,7 +149,12 @@ class HealthDataController {
       });
 
       // Only patients can create health data
+      console.log("User role check:", {
+        userRole,
+        isPatient: userRole === "patient",
+      });
       if (userRole !== "patient") {
+        console.log("Access denied - user role is not patient:", userRole);
         return res.status(403).json({
           status: "error",
           message: "Only patients can create health data",
@@ -305,6 +310,9 @@ class HealthDataController {
           updatedAt: new Date(),
           lastUpdated: new Date(),
         });
+
+        // Save the new document first
+        await existingHealthData.save();
       }
 
       // Update each metric
@@ -463,7 +471,7 @@ class HealthDataController {
       res.json({
         status: "success",
         data: {
-          healthData: result.data.map((item) => item.toObject()),
+          healthData: result.data, // Data is already in the correct format
           pagination: {
             page: result.page,
             limit: result.limit,

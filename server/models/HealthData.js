@@ -43,7 +43,19 @@ class HealthData {
       const { patientId, type, value, unit, timestamp, notes } = data;
       const now = new Date();
 
+      // Map old type names to new structure
+      const typeMapping = {
+        heart_rate: "heartRate",
+        blood_pressure: "bloodPressure",
+      };
+      const mappedType = typeMapping[type] || type;
+
       try {
+        // Check if Firebase is available
+        if (!db) {
+          throw new Error("Firebase not available");
+        }
+
         // Check if patient health data already exists
         const patientDoc = await db
           .collection("patientHealthData")
@@ -59,10 +71,14 @@ class HealthData {
             ...existingData,
             healthMetrics: {
               ...existingData.healthMetrics,
-              [type]: {
+              [mappedType]: {
                 value: value,
                 unit: unit,
-                timestamp: timestamp ? new Date(timestamp) : now,
+                timestamp: timestamp
+                  ? timestamp instanceof Date
+                    ? timestamp
+                    : new Date(timestamp)
+                  : now,
                 notes: notes || "",
               },
             },
@@ -72,10 +88,14 @@ class HealthData {
         } else {
           // Create new document
           const healthMetrics = {};
-          healthMetrics[type] = {
+          healthMetrics[mappedType] = {
             value: value,
             unit: unit,
-            timestamp: timestamp ? new Date(timestamp) : now,
+            timestamp: timestamp
+              ? timestamp instanceof Date
+                ? timestamp
+                : new Date(timestamp)
+              : now,
             notes: notes || "",
           };
 
@@ -118,10 +138,14 @@ class HealthData {
             ...existingData,
             healthMetrics: {
               ...existingData.healthMetrics,
-              [type]: {
+              [mappedType]: {
                 value: value,
                 unit: unit,
-                timestamp: timestamp ? new Date(timestamp) : now,
+                timestamp: timestamp
+                  ? timestamp instanceof Date
+                    ? timestamp
+                    : new Date(timestamp)
+                  : now,
                 notes: notes || "",
               },
             },
@@ -131,10 +155,14 @@ class HealthData {
         } else {
           // Create new
           const healthMetrics = {};
-          healthMetrics[type] = {
+          healthMetrics[mappedType] = {
             value: value,
             unit: unit,
-            timestamp: timestamp ? new Date(timestamp) : now,
+            timestamp: timestamp
+              ? timestamp instanceof Date
+                ? timestamp
+                : new Date(timestamp)
+              : now,
             notes: notes || "",
           };
 
@@ -150,6 +178,10 @@ class HealthData {
 
         global.mockPatientHealthData.set(patientId, healthData.toObject());
         console.log("Health data created/updated (mock):", healthData);
+        console.log(
+          "Mock storage now contains:",
+          Array.from(global.mockPatientHealthData.keys())
+        );
         return healthData;
       }
     } catch (error) {
@@ -163,6 +195,11 @@ class HealthData {
       console.log("Finding health data for patient:", patientId, options);
 
       try {
+        // Check if Firebase is available
+        if (!db) {
+          throw new Error("Firebase not available");
+        }
+
         // Get the patient's consolidated health data document
         const patientDoc = await db
           .collection("patientHealthData")
@@ -200,11 +237,56 @@ class HealthData {
           metrics: Object.keys(healthData.healthMetrics || {}),
         });
 
+        // Convert consolidated data to individual entries for frontend compatibility
+        const individualEntries = [];
+        if (healthData.healthMetrics) {
+          for (const [metricType, metricData] of Object.entries(
+            healthData.healthMetrics
+          )) {
+            if (
+              metricData &&
+              metricData.value !== null &&
+              metricData.value !== undefined
+            ) {
+              // Convert back to original type names for frontend
+              const originalType =
+                metricType === "heartRate"
+                  ? "heart_rate"
+                  : metricType === "bloodPressure"
+                  ? "blood_pressure"
+                  : metricType;
+
+              // Ensure timestamp is a Date object
+              const timestamp =
+                metricData.timestamp instanceof Date
+                  ? metricData.timestamp
+                  : new Date(metricData.timestamp);
+
+              individualEntries.push({
+                id: `${patientId}_${metricType}_${timestamp.getTime()}`,
+                patientId: patientId,
+                type: originalType,
+                value: metricData.value,
+                unit: metricData.unit,
+                timestamp: timestamp,
+                notes: metricData.notes,
+                createdAt: healthData.createdAt,
+                updatedAt: healthData.updatedAt,
+              });
+            }
+          }
+        }
+
+        // Sort by timestamp descending
+        individualEntries.sort(
+          (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+        );
+
         return {
-          data: [healthData],
-          total: 1,
+          data: individualEntries,
+          total: individualEntries.length,
           page: 1,
-          limit: 1,
+          limit: individualEntries.length,
           totalPages: 1,
         };
       } catch (firebaseError) {
@@ -219,6 +301,13 @@ class HealthData {
         }
 
         const mockData = global.mockPatientHealthData.get(patientId);
+        console.log("Mock storage lookup for patient:", patientId);
+        console.log(
+          "Available patients in mock storage:",
+          Array.from(global.mockPatientHealthData.keys())
+        );
+        console.log("Found mock data:", mockData ? "Yes" : "No");
+
         if (!mockData) {
           return {
             data: [],
@@ -236,11 +325,56 @@ class HealthData {
           metrics: Object.keys(healthData.healthMetrics || {}),
         });
 
+        // Convert consolidated data to individual entries for frontend compatibility
+        const individualEntries = [];
+        if (healthData.healthMetrics) {
+          for (const [metricType, metricData] of Object.entries(
+            healthData.healthMetrics
+          )) {
+            if (
+              metricData &&
+              metricData.value !== null &&
+              metricData.value !== undefined
+            ) {
+              // Convert back to original type names for frontend
+              const originalType =
+                metricType === "heartRate"
+                  ? "heart_rate"
+                  : metricType === "bloodPressure"
+                  ? "blood_pressure"
+                  : metricType;
+
+              // Ensure timestamp is a Date object
+              const timestamp =
+                metricData.timestamp instanceof Date
+                  ? metricData.timestamp
+                  : new Date(metricData.timestamp);
+
+              individualEntries.push({
+                id: `${patientId}_${metricType}_${timestamp.getTime()}`,
+                patientId: patientId,
+                type: originalType,
+                value: metricData.value,
+                unit: metricData.unit,
+                timestamp: timestamp,
+                notes: metricData.notes,
+                createdAt: healthData.createdAt,
+                updatedAt: healthData.updatedAt,
+              });
+            }
+          }
+        }
+
+        // Sort by timestamp descending
+        individualEntries.sort(
+          (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+        );
+
         return {
-          data: [healthData],
-          total: 1,
+          data: individualEntries,
+          total: individualEntries.length,
           page: 1,
-          limit: 1,
+          limit: individualEntries.length,
           totalPages: 1,
         };
       }
@@ -255,6 +389,11 @@ class HealthData {
       console.log("Finding health data by ID:", id);
 
       try {
+        // Check if Firebase is available
+        if (!db) {
+          throw new Error("Firebase not available");
+        }
+
         const doc = await db.collection("patientHealthData").doc(id).get();
 
         if (!doc.exists) {
@@ -319,6 +458,11 @@ class HealthData {
       };
 
       try {
+        // Check if Firebase is available
+        if (!db) {
+          throw new Error("Firebase not available");
+        }
+
         if (this.id) {
           // Update existing document
           await db.collection("patientHealthData").doc(this.id).set(updateData);
@@ -373,6 +517,11 @@ class HealthData {
       }
 
       try {
+        // Check if Firebase is available
+        if (!db) {
+          throw new Error("Firebase not available");
+        }
+
         await db.collection("patientHealthData").doc(this.id).delete();
         console.log("Health data deleted successfully:", this.id);
         return true;

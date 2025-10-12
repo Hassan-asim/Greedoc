@@ -51,6 +51,20 @@ class ChatController {
 
       await chatMessage.save();
 
+      // Create notification for receiver
+      try {
+        const { db } = require('../config/firebase');
+        await db.collection('notifications').add({
+          userId: receiverId,
+          title: 'New message from your doctor',
+          body: message,
+          kind: 'message',
+          data: { senderId, messageType },
+          isRead: false,
+          createdAt: new Date()
+        });
+      } catch (_) {}
+
       // Get sender info for notification
       const sender = await User.findById(senderId);
 

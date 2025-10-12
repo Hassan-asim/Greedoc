@@ -1,4 +1,3 @@
-const bcrypt = require("bcryptjs");
 const { db } = require("../config/firebase");
 
 class User {
@@ -205,10 +204,7 @@ class User {
         }
       });
 
-      // Hash password if it was updated
-      if (updates.password) {
-        await user.hashPassword();
-      }
+      // Password is stored as plain text - no hashing needed
 
       user.updatedAt = new Date();
       await user.save();
@@ -309,26 +305,7 @@ class User {
     }
   }
 
-  // Password methods
-  async hashPassword() {
-    // No hashing - keep password in plain text
-    if (this.password) {
-      console.log("hashPassword called (no hashing - plain text):", {
-        originalPassword: this.password,
-        originalLength: this.password.length,
-        userId: this.id,
-        email: this.email,
-      });
-
-      // Keep password as is (plain text)
-      console.log("Password kept in plain text:", {
-        password: this.password,
-        length: this.password.length,
-      });
-
-      // No hashing - password remains as plain text
-    }
-  }
+  // Password methods - removed hashing functionality
 
   async comparePassword(candidatePassword) {
     console.log("comparePassword called (plain text):", {
@@ -357,17 +334,12 @@ class User {
   // Instance methods
   async save() {
     try {
-      // Hash password before saving
-      if (this.password && !this.password.startsWith("$2a$")) {
-        console.log("Hashing password before saving");
-        this.password = await bcrypt.hash(this.password, 12);
-      }
-
-      console.log("Saving user with hashed password:", {
+      // Store password in plain text (no hashing)
+      console.log("Saving user with plain text password:", {
         isNewUser: !this.id,
         hasPassword: !!this.password,
         passwordPreview: this.password
-          ? this.password.substring(0, 10) + "..."
+          ? this.password.substring(0, 5) + "..."
           : "No password",
       });
 

@@ -16,17 +16,20 @@ import {
   FiEye,
   FiEdit,
   FiMessageCircle,
-  FiFileText
 } from 'react-icons/fi'
+import { medicationAPI } from '../services/api'
+import { healthDataService } from '../services/healthDataService'
+import toast from 'react-hot-toast'
 
 interface HealthMetric {
   id: string
-  type: 'steps' | 'heart_rate' | 'sleep' | 'blood_pressure'
+  type: 'steps' | 'heart_rate' | 'sleep' | 'blood_pressure' | 'weight' | 'temperature'
   value: string
   unit: string
   trend: 'up' | 'down' | 'stable'
   status: 'good' | 'warning' | 'critical'
   timestamp: string
+  notes?: string
 }
 
 interface RiskAlert {
@@ -56,11 +59,14 @@ export const PatientDashboard: React.FC = () => {
   const [riskAlerts, setRiskAlerts] = useState<RiskAlert[]>([])
   const [aiInsights, setAIInsights] = useState<AIInsight[]>([])
   const [loading, setLoading] = useState(true)
+  const [showMedReminders, setShowMedReminders] = useState(false)
+  const [dueMedications, setDueMedications] = useState<any[]>([])
+  const [loadingDue, setLoadingDue] = useState(false)
 
   // Debug authentication state
   useEffect(() => {
     console.log('PatientDashboard auth state:', {
-      user: user ? { id: user.id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName } : null,
+      user: user ? { id: user._id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName } : null,
       authLoading,
       hasToken: !!localStorage.getItem('token')
     })
@@ -77,70 +83,99 @@ export const PatientDashboard: React.FC = () => {
       setLoading(true)
       console.log('Loading patient data for user:', user)
       
-      // Mock data for demonstration - in a real app, these would be API calls
-      const mockHealthMetrics: HealthMetric[] = [
-        {
-          id: '1',
-          type: 'heart_rate',
-          value: '72',
-          unit: 'bpm',
-          trend: 'stable',
-          status: 'good',
-          timestamp: '2 hours ago'
-        },
-        {
-          id: '2',
-          type: 'blood_pressure',
-          value: '120/80',
-          unit: 'mmHg',
-          trend: 'stable',
-          status: 'good',
-          timestamp: '1 hour ago'
-        },
-        {
-          id: '3',
-          type: 'steps',
-          value: '8,500',
-          unit: 'steps',
-          trend: 'up',
-          status: 'good',
-          timestamp: 'Today'
-        },
-        {
-          id: '4',
-          type: 'sleep',
-          value: '7.5',
-          unit: 'hours',
-          trend: 'stable',
-          status: 'good',
-          timestamp: 'Last night'
-        }
-      ]
+      // Load real health data from the database
+      const healthDataResponse = await healthDataService.getRecentHealthData(10)
+      console.log('Health data response:', healthDataResponse)
+      
+      // Extract the actual data array from the response
+      // The response structure is: { status: 'success', data: { healthData: [...], pagination: {...} } }
+      let healthDataArray = []
+      
+      if (healthDataResponse.data && healthDataResponse.data.healthData) {
+        healthDataArray = healthDataResponse.data.healthData
+      } else if (Array.isArray(healthDataResponse.data)) {
+        healthDataArray = healthDataResponse.data
+      } else {
+        console.log('Unexpected response structure:', healthDataResponse.data)
+        healthDataArray = []
+      }
+      
+      console.log('Health data array:', healthDataArray)
+      console.log('Array length:', healthDataArray.length)
+      
+      // Transform health data to health metrics format
+      const realHealthMetrics: HealthMetric[] = Array.isArray(healthDataArray) ? healthDataArray.map((data: any) => ({
+        id: data.id,
+        type: data.type,
+        value: data.value.toString(),
+        unit: data.unit,
+        trend: 'stable', // TODO: Calculate trend based on historical data
+        status: getHealthStatus(data.type, data.value),
+        timestamp: formatTimeAgo(data.timestamp),
+        notes: data.notes
+      })) : []
 
-      const mockAIInsights: AIInsight[] = [
-        {
-          id: '1',
-          title: 'Exercise Recommendation',
-          description: 'Based on your recent activity, consider adding 15 minutes of cardio to your morning routine.',
-          type: 'recommendation',
-          priority: 'medium'
-        },
-        {
-          id: '2',
-          title: 'Medication Reminder',
-          description: 'Don\'t forget to take your evening medication at 8:00 PM.',
-          type: 'reminder',
-          priority: 'high'
-        }
-      ]
+      console.log('Transformed health metrics:', realHealthMetrics)
 
-      setHealthMetrics(mockHealthMetrics)
+      // Generate AI insights based on health data
+      const aiInsights: AIInsight[] = generateAIInsights(realHealthMetrics)
+
+      setHealthMetrics(realHealthMetrics)
       setRiskAlerts([])
-      setAIInsights(mockAIInsights)
-    } catch (error) {
+      setAIInsights(aiInsights)
+      
+      // Show success message if data was loaded
+      if (realHealthMetrics.length > 0) {
+        toast.success(`Loaded ${realHealthMetrics.length} health data entries`)
+      } else {
+        toast('No health data found. Start logging your health metrics!', { icon: 'ℹ️' })
+      }
+    } catch (error: any) {
       console.error('Error loading patient data:', error)
+      
+      // Handle 401 Unauthorized error
+      if (error.response?.status === 401) {
+        toast.error('Session expired. Please log in again.')
+        // Redirect to login
+        window.location.href = '/patient/login'
+        return
+      }
+      
+      // Show error message for other errors
+      toast.error('Failed to load health data. Please try again.')
+      
+      // Set empty data on error
+      setHealthMetrics([])
+      setRiskAlerts([])
+      setAIInsights([])
     } finally {
       setLoading(false)
+    }
+  }
+
+
+  const openMedicationReminders = async () => {
+    try {
+      setShowMedReminders(true)
+      setLoadingDue(true)
+      const res = await medicationAPI.getDueMedications()
+      setDueMedications(res.data.data.medications || [])
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Failed to load reminders')
+    } finally {
+      setLoadingDue(false)
+    }
+  }
+
+  const markMedicationTaken = async (medId: string) => {
+    try {
+      await medicationAPI.markMedicationTaken(medId)
+      toast.success('Marked as taken')
+      // Refresh list
+      const res = await medicationAPI.getDueMedications()
+      setDueMedications(res.data.data.medications || [])
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Failed to mark as taken')
     }
   }
 
@@ -180,6 +215,111 @@ export const PatientDashboard: React.FC = () => {
       case 'low': return 'border-success-500 bg-success-50'
       default: return 'border-gray-200 bg-gray-50'
     }
+  }
+
+  // Helper function to determine health status based on type and value
+  const getHealthStatus = (type: string, value: any): 'good' | 'warning' | 'critical' => {
+    const numValue = typeof value === 'string' ? parseFloat(value) : value
+    
+    switch (type) {
+      case 'heart_rate':
+        if (numValue < 60 || numValue > 100) return 'warning'
+        return 'good'
+      case 'blood_pressure':
+        if (typeof value === 'string' && value.includes('/')) {
+          const [systolic, diastolic] = value.split('/').map(Number)
+          if (systolic > 140 || diastolic > 90) return 'warning'
+          if (systolic > 160 || diastolic > 100) return 'critical'
+        }
+        return 'good'
+      case 'steps':
+        if (numValue < 5000) return 'warning'
+        return 'good'
+      case 'sleep':
+        if (numValue < 6 || numValue > 9) return 'warning'
+        return 'good'
+      case 'weight':
+        // This would need to be compared against ideal weight range
+        return 'good'
+      case 'temperature':
+        if (numValue < 97 || numValue > 99.5) return 'warning'
+        if (numValue < 95 || numValue > 102) return 'critical'
+        return 'good'
+      default:
+        return 'good'
+    }
+  }
+
+  // Helper function to format time ago
+  const formatTimeAgo = (timestamp: string): string => {
+    const now = new Date()
+    const time = new Date(timestamp)
+    const diffInMinutes = Math.floor((now.getTime() - time.getTime()) / (1000 * 60))
+    
+    if (diffInMinutes < 1) return 'Just now'
+    if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`
+    
+    const diffInHours = Math.floor(diffInMinutes / 60)
+    if (diffInHours < 24) return `${diffInHours} hours ago`
+    
+    const diffInDays = Math.floor(diffInHours / 24)
+    if (diffInDays < 7) return `${diffInDays} days ago`
+    
+    return time.toLocaleDateString()
+  }
+
+  // Helper function to generate AI insights based on health data
+  const generateAIInsights = (metrics: HealthMetric[]): AIInsight[] => {
+    const insights: AIInsight[] = []
+    
+    // Check for low activity
+    const stepsData = metrics.find(m => m.type === 'steps')
+    if (stepsData && parseInt(stepsData.value) < 5000) {
+      insights.push({
+        id: 'low-activity',
+        title: 'Low Activity Alert',
+        description: 'Your step count is below the recommended 10,000 steps. Consider taking a walk or doing light exercise.',
+        type: 'recommendation',
+        priority: 'medium'
+      })
+    }
+    
+    // Check for sleep issues
+    const sleepData = metrics.find(m => m.type === 'sleep')
+    if (sleepData && parseFloat(sleepData.value) < 7) {
+      insights.push({
+        id: 'sleep-reminder',
+        title: 'Sleep Recommendation',
+        description: 'You\'re getting less than 7 hours of sleep. Aim for 7-9 hours for optimal health.',
+        type: 'recommendation',
+        priority: 'high'
+      })
+    }
+    
+    // Check for heart rate anomalies
+    const heartRateData = metrics.find(m => m.type === 'heart_rate')
+    if (heartRateData && (parseInt(heartRateData.value) < 60 || parseInt(heartRateData.value) > 100)) {
+      insights.push({
+        id: 'heart-rate-alert',
+        title: 'Heart Rate Alert',
+        description: 'Your heart rate is outside the normal range. Consider consulting with your doctor.',
+        type: 'recommendation',
+        priority: 'high'
+      })
+    }
+    
+    // Add general encouragement if no issues
+    if (insights.length === 0) {
+      insights.push({
+        id: 'general-encouragement',
+        title: 'Great Job!',
+        description: 'Your health metrics look good. Keep up the healthy lifestyle!',
+        type: 'recommendation',
+        priority: 'low'
+      })
+    }
+    
+    return insights
   }
 
   // Show loading while authentication is being verified
@@ -224,10 +364,18 @@ export const PatientDashboard: React.FC = () => {
                 <FiAlertCircle className="mr-2 h-4 w-4" />
                 Emergency
               </button>
-              <button className="btn btn-primary btn-md inline-flex items-center">
+              <button 
+                onClick={loadPatientData}
+                disabled={loading}
+                className="btn btn-outline btn-md inline-flex items-center"
+              >
+                <FiActivity className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                {loading ? 'Refreshing...' : 'Refresh Data'}
+              </button>
+              <Link to="/health-twin" className="btn btn-primary btn-md inline-flex items-center">
                 <FiPlus className="mr-2 h-4 w-4" />
                 Log Health Data
-              </button>
+              </Link>
               <Link
                 to="/"
                 className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
@@ -264,7 +412,7 @@ export const PatientDashboard: React.FC = () => {
                       </h3>
                       <p className="text-sm text-gray-600">{user.email}</p>
                       <p className="text-sm text-gray-500">
-                        Patient ID: {user.id} | Role: {user.role}
+                        Patient ID: {user._id} | Role: {user.role}
                       </p>
                     </div>
                   </div>
@@ -283,12 +431,19 @@ export const PatientDashboard: React.FC = () => {
         {/* Health Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {loading ? (
-            <div className="col-span-full text-center py-8 text-gray-500">Loading health metrics...</div>
+            <div className="col-span-full text-center py-8 text-gray-500">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+              Loading health metrics...
+            </div>
           ) : healthMetrics.length === 0 ? (
             <div className="col-span-full text-center py-8">
               <FiActivity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No health data yet</h3>
-              <p className="text-gray-600">Health metrics will appear here as you use the platform</p>
+              <p className="text-gray-600 mb-4">Start logging your health data to see insights here</p>
+              <Link to="/health-twin" className="btn btn-primary">
+                <FiPlus className="mr-2 h-4 w-4" />
+                Log Your First Health Data
+              </Link>
             </div>
           ) : (
             healthMetrics.map((metric) => {
@@ -317,12 +472,18 @@ export const PatientDashboard: React.FC = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className={`text-sm ${getStatusColor(metric.status)}`}>
-                        {metric.status === 'good' && <FiCheckCircle className="h-4 w-4" />}
-                        {metric.status === 'warning' && <FiAlertCircle className="h-4 w-4" />}
-                        {metric.status === 'critical' && <FiAlertCircle className="h-4 w-4" />}
+                      <div className={`text-sm ${getStatusColor(metric.status)} flex items-center justify-end`}>
+                        {metric.status === 'good' && <FiCheckCircle className="h-4 w-4 mr-1" />}
+                        {metric.status === 'warning' && <FiAlertCircle className="h-4 w-4 mr-1" />}
+                        {metric.status === 'critical' && <FiAlertCircle className="h-4 w-4 mr-1" />}
+                        <span className="capitalize">{metric.status}</span>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">{metric.timestamp}</p>
+                      {metric.notes && (
+                        <p className="text-xs text-gray-400 mt-1 max-w-20 truncate" title={metric.notes}>
+                          {metric.notes}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -432,7 +593,7 @@ export const PatientDashboard: React.FC = () => {
               </div>
               <div className="card-content">
                 <div className="space-y-3">
-                  <button className="btn btn-outline btn-sm w-full justify-start">
+                  <button onClick={openMedicationReminders} className="btn btn-outline btn-sm w-full justify-start">
                     <FiPackage className="mr-2 h-4 w-4" />
                     Medication Reminder
                   </button>
@@ -505,6 +666,40 @@ export const PatientDashboard: React.FC = () => {
         isOpen={showEmergencyMode} 
         onClose={() => setShowEmergencyMode(false)} 
       />
+
+      {/* Medication Reminders Modal */}
+      {showMedReminders && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Medication Reminders (next 15 min)</h3>
+              <button className="btn btn-outline btn-sm" onClick={() => setShowMedReminders(false)}>Close</button>
+            </div>
+            <div className="p-4">
+              {loadingDue ? (
+                <div className="text-center py-8 text-gray-500">Loading...</div>
+              ) : dueMedications.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">No medications due soon.</div>
+              ) : (
+                <div className="space-y-3">
+                  {dueMedications.map((m: any) => (
+                    <div key={m.id || m._id} className="p-3 border rounded-lg flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-gray-900">{m.name}</div>
+                        {m.dosage?.value ? (
+                          <div className="text-sm text-gray-600">{m.dosage.value}{m.dosage.unit ? ` ${m.dosage.unit}` : ''}</div>
+                        ) : null}
+                        <div className="text-xs text-gray-500">Schedule: {(m.frequency?.schedule || []).map((s: any) => s.time).join(', ')}</div>
+                      </div>
+                      <button className="btn btn-primary btn-sm" onClick={() => markMedicationTaken(m.id || m._id)}>Mark taken</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

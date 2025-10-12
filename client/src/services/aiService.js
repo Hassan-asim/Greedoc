@@ -1,16 +1,25 @@
 import api from './api';
 
 const aiService = {
-  chatWithVirtualDoctor: async (message, context = {}) => {
+  chatWithVirtualDoctor: async (message, context = {}, patientId) => {
     try {
-      const response = await api.post('/ai/chat', {
-        message,
-        context,
-        type: 'virtual_doctor'
-      });
+      const payload = { message, context, type: 'virtual_doctor' };
+      if (patientId) payload.patientId = patientId;
+      const response = await api.post('/ai/chat', payload);
       return response.data.data;
     } catch (error) {
       console.error('Error chatting with virtual doctor:', error);
+      throw error;
+    }
+  },
+
+  getVirtualDoctorHistory: async (patientId) => {
+    try {
+      const url = patientId ? `/ai/chat/history/${patientId}` : '/ai/chat/history';
+      const response = await api.get(url);
+      return response.data.data;
+    } catch (error) {
+      console.error('Error fetching virtual doctor history:', error);
       throw error;
     }
   },

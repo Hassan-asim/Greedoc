@@ -1,10 +1,11 @@
+/// <reference types="vite/client" />
 import axios from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -158,6 +159,11 @@ export const medicationAPI = {
     api.get('/medications/adherence/summary', { params }),
 }
 
+export const notificationsAPI = {
+  getNotifications: () => api.get('/notifications'),
+  markRead: (id: string) => api.put(`/notifications/${id}/read`),
+}
+
 export const appointmentAPI = {
   getAppointments: (params?: any) =>
     api.get('/appointments', { params }),
@@ -182,6 +188,13 @@ export const appointmentAPI = {
   
   updateAppointmentStatus: (id: string, status: string, notes?: string) =>
     api.put(`/appointments/${id}/status`, { status, notes }),
+}
+
+export const eventsAPI = {
+  getMonthEvents: (year: number, month: number) =>
+    api.get(`/events/calendar/${year}/${month}`),
+  createEvent: (event: { title: string; type: 'medication'|'appointment'|'exercise'|'reminder'; date: string; time?: string; description?: string; }) =>
+    api.post('/events', event),
 }
 
 export const aiAPI = {

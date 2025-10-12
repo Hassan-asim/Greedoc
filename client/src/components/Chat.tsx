@@ -46,13 +46,10 @@ const Chat: React.FC<ChatProps> = ({ selectedChatRoom, onChatRoomSelect }) => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<string | null>(selectedChatRoom || null);
-  const [isTyping, setIsTyping] = useState(false);
-  const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [assignedDoctor, setAssignedDoctor] = useState<any>(null);
   const [doctorPatients, setDoctorPatients] = useState<any[]>([]);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize Firebase real-time listeners
   useEffect(() => {
@@ -143,15 +140,9 @@ const Chat: React.FC<ChatProps> = ({ selectedChatRoom, onChatRoomSelect }) => {
         setMessages(messages);
       });
 
-      // Listen to typing indicators
-      const unsubscribeTyping = firebaseRealtimeService.listenToTyping(selectedRoom, (typingUsers) => {
-        setTypingUsers(typingUsers.filter(id => id !== user?.id));
-      });
-
       return () => {
         console.log("Cleaning up listeners for room:", selectedRoom);
         unsubscribeMessages();
-        unsubscribeTyping();
       };
     }
   }, [selectedRoom, user, assignedDoctor, doctorPatients]);
@@ -222,10 +213,6 @@ const Chat: React.FC<ChatProps> = ({ selectedChatRoom, onChatRoomSelect }) => {
 
       console.log('Message sent successfully');
       setNewMessage('');
-
-      // Stop typing indicator
-      firebaseRealtimeService.setTyping(selectedRoom, user.id, false);
-      setIsTyping(false);
     } catch (error) {
       console.error('Error sending message:', error);
     }
@@ -240,37 +227,42 @@ const Chat: React.FC<ChatProps> = ({ selectedChatRoom, onChatRoomSelect }) => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewMessage(e.target.value);
-    
-    if (!isTyping && selectedRoom && user) {
-      setIsTyping(true);
-      firebaseRealtimeService.setTyping(selectedRoom, user.id, true);
-    }
-
-    // Clear existing timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    // Set new timeout to stop typing indicator
-    typingTimeoutRef.current = setTimeout(() => {
-      if (selectedRoom && user) {
-        firebaseRealtimeService.setTyping(selectedRoom, user.id, false);
-        setIsTyping(false);
-      }
-    }, 1000);
   };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatTime = (dateInput: any) => {
+    let date: Date;
+    
+    // Handle Firestore Timestamp objects
+    if (dateInput && typeof dateInput === 'object' && dateInput.toDate) {
+      date = dateInput.toDate();
+    } else if (dateInput && typeof dateInput === 'object' && dateInput.seconds) {
+      // Handle Firestore Timestamp with seconds property
+      date = new Date(dateInput.seconds * 1000);
+    } else if (typeof dateInput === 'string') {
+      date = new Date(dateInput);
+    } else {
+      // Fallback for any other format
+      date = new Date(dateInput);
+    }
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return 'Invalid Date';
+    }
+    
     const now = new Date();
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
     if (diffInHours < 24) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return date.toLocaleTimeString([], { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      });
     } else {
       return date.toLocaleDateString();
     }
@@ -563,27 +555,6 @@ const Chat: React.FC<ChatProps> = ({ selectedChatRoom, onChatRoomSelect }) => {
                   </motion.div>
                 ))}
                 
-                {/* Typing indicators */}
-                {typingUsers.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex justify-start"
-                  >
-                    <div className="bg-gray-100 text-gray-900 px-4 py-2 rounded-lg">
-                      <div className="flex items-center space-x-1">
-                        <div className="flex space-x-1">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                        </div>
-                        <span className="text-xs text-gray-500 ml-2">
-                          {typingUsers.length === 1 ? 'Someone is typing...' : `${typingUsers.length} people are typing...`}
-                        </span>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
               </AnimatePresence>
               <div ref={messagesEndRef} />
             </div>

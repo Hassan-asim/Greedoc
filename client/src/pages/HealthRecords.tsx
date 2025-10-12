@@ -1,7 +1,55 @@
-import React from 'react'
-import { FiPlus, FiFileText, FiCalendar, FiActivity } from 'react-icons/fi'
+import React, { useState } from 'react'
+import { FiPlus, FiFileText, FiCalendar, FiActivity, FiEdit3 } from 'react-icons/fi'
+import HealthDataDisplay from '../components/HealthDataDisplay'
+import HealthDataForm from '../components/HealthDataForm'
+import { HealthData } from '../services/healthDataService'
 
 export const HealthRecords: React.FC = () => {
+  const [showForm, setShowForm] = useState(false)
+  const [editingData, setEditingData] = useState<HealthData | null>(null)
+
+  const handleAddRecord = () => {
+    setEditingData(null)
+    setShowForm(true)
+  }
+
+  const handleEditRecord = () => {
+    setShowForm(true)
+  }
+
+  const handleFormSuccess = (data: HealthData) => {
+    setEditingData(data)
+    setShowForm(false)
+  }
+
+  const handleFormCancel = () => {
+    setShowForm(false)
+    setEditingData(null)
+  }
+
+  if (showForm) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {editingData ? 'Edit Health Data' : 'Add Health Data'}
+            </h1>
+            <p className="text-gray-600">
+              {editingData ? 'Update your health metrics' : 'Record your health metrics'}
+            </p>
+          </div>
+        </div>
+
+        <HealthDataForm
+          initialData={editingData}
+          onSuccess={handleFormSuccess}
+          onCancel={handleFormCancel}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -9,9 +57,12 @@ export const HealthRecords: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Health Records</h1>
           <p className="text-gray-600">Manage your health data and medical records</p>
         </div>
-        <button className="btn btn-primary btn-md">
+        <button 
+          onClick={handleAddRecord}
+          className="btn btn-primary btn-md"
+        >
           <FiPlus className="h-4 w-4 mr-2" />
-          Add Record
+          Add Health Data
         </button>
       </div>
 
@@ -22,8 +73,8 @@ export const HealthRecords: React.FC = () => {
               <FiFileText className="h-6 w-6 text-blue-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Records</p>
-              <p className="text-2xl font-bold text-gray-900">24</p>
+              <p className="text-sm font-medium text-gray-600">Health Metrics</p>
+              <p className="text-2xl font-bold text-gray-900">6</p>
             </div>
           </div>
         </div>
@@ -34,8 +85,8 @@ export const HealthRecords: React.FC = () => {
               <FiActivity className="h-6 w-6 text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">This Month</p>
-              <p className="text-2xl font-bold text-gray-900">8</p>
+              <p className="text-sm font-medium text-gray-600">Last Updated</p>
+              <p className="text-2xl font-bold text-gray-900">Today</p>
             </div>
           </div>
         </div>
@@ -46,29 +97,18 @@ export const HealthRecords: React.FC = () => {
               <FiCalendar className="h-6 w-6 text-purple-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Last Updated</p>
-              <p className="text-2xl font-bold text-gray-900">2 days ago</p>
+              <p className="text-sm font-medium text-gray-600">Status</p>
+              <p className="text-2xl font-bold text-gray-900">Active</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="card">
-        <div className="card-header">
-          <h3 className="card-title">Recent Records</h3>
-        </div>
-        <div className="card-content">
-          <div className="text-center py-12">
-            <FiFileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No records yet</h3>
-            <p className="text-gray-500 mb-4">Start by adding your first health record</p>
-            <button className="btn btn-primary btn-md">
-              <FiPlus className="h-4 w-4 mr-2" />
-              Add Your First Record
-            </button>
-          </div>
-        </div>
-      </div>
+      <HealthDataDisplay
+        onEdit={handleEditRecord}
+        showEditButton={true}
+      />
     </div>
   )
 }
+

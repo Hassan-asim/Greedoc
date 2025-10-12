@@ -166,10 +166,10 @@ router.post("/reset-password", AuthController.resetPassword);
 router.post("/debug-user", AuthController.debugUser);
 
 /**
- * @route   POST /api/auth/fix-password-hash
- * @desc    Fix password hash for existing users (temporary)
+ * @route   POST /api/auth/update-password
+ * @desc    Update password for existing users (plain text)
  * @access  Public
  */
-router.post("/fix-password-hash", AuthController.fixPasswordHash);
+router.post("/update-password", AuthController.updatePassword);
 
 module.exports = router;

@@ -26,24 +26,89 @@ class FirebaseRealtimeService {
 
     const unsubscribe = onSnapshot(
       q,
-      (snapshot) => {
+      async (snapshot) => {
         console.log(
           `Received ${snapshot.size} messages for room ${chatRoomId}`
         );
         const messages = [];
+        const senderIds = new Set();
+
         snapshot.forEach((doc) => {
           const messageData = { id: doc.id, ...doc.data() };
+
+          // Convert Firestore Timestamps to JavaScript Dates
+          if (messageData.createdAt && messageData.createdAt.toDate) {
+            messageData.createdAt = messageData.createdAt.toDate();
+          }
+          if (messageData.readAt && messageData.readAt.toDate) {
+            messageData.readAt = messageData.readAt.toDate();
+          }
+
           console.log("Message data:", messageData);
           messages.push(messageData);
+          senderIds.add(messageData.senderId);
         });
+
         // Sort by createdAt on the client side to avoid index requirements
         messages.sort((a, b) => {
-          const aTime = a.createdAt?.toDate?.() || new Date(a.createdAt);
-          const bTime = b.createdAt?.toDate?.() || new Date(b.createdAt);
+          const aTime = new Date(a.createdAt);
+          const bTime = new Date(b.createdAt);
           return aTime - bTime; // Oldest first
         });
-        console.log("Sending messages to callback:", messages.length);
-        callback(messages);
+
+        // Fetch sender details for all unique senders
+        const senderDetails = new Map();
+        for (const senderId of senderIds) {
+          try {
+            const API_BASE_URL =
+              import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+            const response = await fetch(`${API_BASE_URL}/users/${senderId}`, {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+                "Content-Type": "application/json",
+              },
+            });
+
+            if (response.ok) {
+              const userData = await response.json();
+              console.log("User data received for message sender:", userData);
+              senderDetails.set(senderId, {
+                id: senderId,
+                fullName: `${userData.data.user.firstName} ${userData.data.user.lastName}`,
+                avatar: userData.data.user.avatar || null,
+              });
+            } else {
+              senderDetails.set(senderId, {
+                id: senderId,
+                fullName: "Unknown User",
+                avatar: null,
+              });
+            }
+          } catch (error) {
+            console.error("Error fetching sender details:", error);
+            senderDetails.set(senderId, {
+              id: senderId,
+              fullName: "Unknown User",
+              avatar: null,
+            });
+          }
+        }
+
+        // Add sender details to messages
+        const messagesWithSenders = messages.map((message) => ({
+          ...message,
+          sender: senderDetails.get(message.senderId) || {
+            id: message.senderId,
+            fullName: "Unknown User",
+            avatar: null,
+          },
+        }));
+
+        console.log(
+          "Sending messages to callback:",
+          messagesWithSenders.length
+        );
+        callback(messagesWithSenders);
       },
       (error) => {
         console.error("Error in message listener:", error);
@@ -102,8 +167,8 @@ class FirebaseRealtimeService {
 
       // Sort filtered messages by creation time
       filteredMessages.sort((a, b) => {
-        const aTime = a.createdAt?.toDate?.() || new Date(a.createdAt);
-        const bTime = b.createdAt?.toDate?.() || new Date(b.createdAt);
+        const aTime = new Date(a.createdAt);
+        const bTime = new Date(b.createdAt);
         return bTime - aTime; // Newest first
       });
 
@@ -115,14 +180,12 @@ class FirebaseRealtimeService {
             chatRoomId: roomId,
             lastMessage: message,
             unreadCount: 0,
+            otherUser: null, // Will be populated below
           });
         } else {
           const room = chatRooms.get(roomId);
-          const messageTime =
-            message.createdAt?.toDate?.() || new Date(message.createdAt);
-          const lastMessageTime =
-            room.lastMessage.createdAt?.toDate?.() ||
-            new Date(room.lastMessage.createdAt);
+          const messageTime = new Date(message.createdAt);
+          const lastMessageTime = new Date(room.lastMessage.createdAt);
 
           if (messageTime > lastMessageTime) {
             room.lastMessage = message;
@@ -136,13 +199,85 @@ class FirebaseRealtimeService {
         }
       });
 
-      callback(Array.from(chatRooms.values()));
+      // Now fetch user details for each chat room
+      const fetchUserDetails = async () => {
+        const roomsWithUsers = [];
+
+        for (const room of chatRooms.values()) {
+          const roomId = room.chatRoomId;
+          const roomParts = roomId.split("_");
+
+          if (roomParts.length === 3) {
+            const [, firstId, secondId] = roomParts;
+            const otherUserId = userId === firstId ? secondId : firstId;
+
+            try {
+              // Fetch user details from the backend API
+              const API_BASE_URL =
+                import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+              const response = await fetch(
+                `${API_BASE_URL}/users/${otherUserId}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem("token")}`,
+                    "Content-Type": "application/json",
+                  },
+                }
+              );
+
+              if (response.ok) {
+                const userData = await response.json();
+                console.log("User data received for chat room:", userData);
+                room.otherUser = {
+                  id: otherUserId,
+                  fullName: `${userData.data.user.firstName} ${userData.data.user.lastName}`,
+                  avatar: userData.data.user.avatar || null,
+                  isOnline: userData.data.user.isOnline || false,
+                };
+              } else {
+                // Fallback to unknown user
+                room.otherUser = {
+                  id: otherUserId,
+                  fullName: "Unknown User",
+                  avatar: null,
+                  isOnline: false,
+                };
+              }
+            } catch (error) {
+              console.error("Error fetching user details:", error);
+              // Fallback to unknown user
+              room.otherUser = {
+                id: otherUserId,
+                fullName: "Unknown User",
+                avatar: null,
+                isOnline: false,
+              };
+            }
+          }
+
+          roomsWithUsers.push(room);
+        }
+
+        callback(roomsWithUsers);
+      };
+
+      fetchUserDetails();
     };
 
     const unsubscribeSender = onSnapshot(senderQuery, (snapshot) => {
       senderMessages = [];
       snapshot.forEach((doc) => {
-        senderMessages.push({ id: doc.id, ...doc.data() });
+        const messageData = { id: doc.id, ...doc.data() };
+
+        // Convert Firestore Timestamps to JavaScript Dates
+        if (messageData.createdAt && messageData.createdAt.toDate) {
+          messageData.createdAt = messageData.createdAt.toDate();
+        }
+        if (messageData.readAt && messageData.readAt.toDate) {
+          messageData.readAt = messageData.readAt.toDate();
+        }
+
+        senderMessages.push(messageData);
       });
       processMessages();
     });
@@ -150,7 +285,17 @@ class FirebaseRealtimeService {
     const unsubscribeReceiver = onSnapshot(receiverQuery, (snapshot) => {
       receiverMessages = [];
       snapshot.forEach((doc) => {
-        receiverMessages.push({ id: doc.id, ...doc.data() });
+        const messageData = { id: doc.id, ...doc.data() };
+
+        // Convert Firestore Timestamps to JavaScript Dates
+        if (messageData.createdAt && messageData.createdAt.toDate) {
+          messageData.createdAt = messageData.createdAt.toDate();
+        }
+        if (messageData.readAt && messageData.readAt.toDate) {
+          messageData.readAt = messageData.readAt.toDate();
+        }
+
+        receiverMessages.push(messageData);
       });
       processMessages();
     });
@@ -218,56 +363,6 @@ class FirebaseRealtimeService {
     } catch (error) {
       console.error("Error marking message as read:", error);
       throw error;
-    }
-  }
-
-  // Listen to typing indicators
-  listenToTyping(chatRoomId, callback) {
-    const typingRef = collection(db, "typing");
-    const q = query(typingRef, where("chatRoomId", "==", chatRoomId));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const typingUsers = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        if (data.isTyping) {
-          typingUsers.push(data.userId);
-        }
-      });
-      callback(typingUsers);
-    });
-
-    this.listeners.set(`typing-${chatRoomId}`, unsubscribe);
-    return unsubscribe;
-  }
-
-  // Set typing indicator
-  async setTyping(chatRoomId, userId, isTyping) {
-    try {
-      const typingRef = collection(db, "typing");
-      const typingId = `${chatRoomId}-${userId}`;
-
-      if (isTyping) {
-        await addDoc(typingRef, {
-          id: typingId,
-          chatRoomId,
-          userId,
-          isTyping: true,
-          timestamp: new Date(),
-        });
-      } else {
-        // Remove typing indicator - use a simpler approach
-        // We'll use the document ID to delete instead of querying
-        const typingDocRef = doc(typingRef, typingId);
-        try {
-          await deleteDoc(typingDocRef);
-        } catch (deleteError) {
-          // If document doesn't exist, that's fine
-          console.log("Typing document not found to delete:", deleteError);
-        }
-      }
-    } catch (error) {
-      console.error("Error setting typing indicator:", error);
     }
   }
 

@@ -1,4 +1,3 @@
-const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { body, validationResult } = require("express-validator");
 const User = require("../models/User");
@@ -238,17 +237,17 @@ class AuthController {
         });
       }
 
-      // Check password
+      // Check password (plain text comparison)
       console.log("Checking password...");
-      const isPasswordValid = await user.comparePassword(password);
+      const isPasswordValid = user.password === password;
       console.log("Password validation result:", {
         isValid: isPasswordValid,
         providedEmail: email,
         storedEmail: user.email,
         emailMatch: email.toLowerCase() === user.email.toLowerCase(),
         providedPassword: password,
-        storedPasswordHash: user.password
-          ? `${user.password.substring(0, 20)}...`
+        storedPassword: user.password
+          ? `${user.password.substring(0, 5)}...`
           : "No password",
         storedPasswordLength: user.password ? user.password.length : 0,
       });
@@ -415,18 +414,17 @@ class AuthController {
         });
       }
 
-      // Update password - force rehashing
+      // Update password - store as plain text
       user.password = newPassword;
       console.log("Before save - password:", {
         newPassword: newPassword,
         userPassword: user.password,
-        needsHashing: !user.password.startsWith("$2b$"),
       });
       await user.save();
 
       console.log("Password reset successful:", {
         email: user.email,
-        newPasswordHash: user.password.substring(0, 20) + "...",
+        newPassword: user.password.substring(0, 5) + "...",
       });
 
       res.status(200).json({
@@ -656,14 +654,14 @@ class AuthController {
   }
 
   /**
-   * Fix password hash for existing users
+   * Update password for existing users (plain text)
    */
-  static async fixPasswordHash(req, res) {
+  static async updatePassword(req, res) {
     try {
       const { email, newPassword } = req.body;
       const normalizedEmail = email.toLowerCase().trim();
 
-      console.log("Fix password hash request:", {
+      console.log("Update password request:", {
         email: normalizedEmail,
         hasNewPassword: !!newPassword,
       });
@@ -677,29 +675,27 @@ class AuthController {
         });
       }
 
-      // Force update the password with new hash
+      // Update password as plain text
       user.password = newPassword;
       await user.save();
 
-      console.log("Password hash fixed successfully:", {
+      console.log("Password updated successfully:", {
         email: user.email,
-        newPasswordHash: user.password.substring(0, 20) + "...",
-        hashVersion: user.password.substring(0, 4),
+        newPassword: user.password.substring(0, 5) + "...",
       });
 
       res.status(200).json({
         status: "success",
-        message: "Password hash updated successfully",
+        message: "Password updated successfully",
         data: {
           email: user.email,
-          hashVersion: user.password.substring(0, 4),
         },
       });
     } catch (error) {
-      console.error("Fix password hash error:", error);
+      console.error("Update password error:", error);
       res.status(500).json({
         status: "error",
-        message: "Failed to fix password hash",
+        message: "Failed to update password",
         error: error.message,
       });
     }

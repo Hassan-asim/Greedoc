@@ -168,14 +168,14 @@ export const VirtualDoctor: React.FC = () => {
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Chat Interface */}
-          <div className="lg:col-span-3">
-            <div className="card h-96">
+          <div className="lg:col-span-3 h-[80dvh]">
+            <div className="card ">
               <div className="card-content p-0">
                 {/* Messages */}
-                <div className="h-80 overflow-y-auto p-4 space-y-4">
+                <div className="h-[80dvh] overflow-y-auto p-4 space-y-4">
                   {messages.map((message) => (
                     <div
                       key={message.id}
@@ -184,15 +184,15 @@ export const VirtualDoctor: React.FC = () => {
                       <div className={`flex max-w-xs lg:max-w-md ${message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                         <div className={`p-2 rounded-full ${
                           message.sender === 'user' 
-                            ? 'bg-primary-500 text-white ml-2' 
-                            : 'bg-gray-100 text-gray-600 mr-2'
+                            ? 'bg-primary-500 text-white ml-2 h-[34px]' 
+                            : 'bg-gray-100 text-gray-600 mr-2 h-[34px]'
                         }`}>
                           {message.sender === 'user' ? <FiUser className="h-4 w-4" /> : <FiMessageCircle className="h-4 w-4" />}
                         </div>
                         <div className={`px-4 py-2 rounded-lg ${
                           message.sender === 'user'
-                            ? 'bg-primary-500 text-white'
-                            : 'bg-gray-100 text-gray-900'
+                            ? 'bg-primary-500 text-white '
+                            : 'bg-gray-100 text-gray-900 '
                         }`}>
                           <p className="text-sm">{message.text}</p>
                           <p className={`text-xs mt-1 ${

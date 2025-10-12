@@ -330,11 +330,11 @@ export const HealthTwin: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
-              <Link to="/patient/dashboard" className="mr-4 p-2 text-black hover:text-gray-900 dark:text-gray-200 dark:hover:text-white">
+              <Link to="/patient/dashboard" className="mr-4 p-2 text-gray-600 hover:text-gray-900">
                 <FiArrowLeft className="h-5 w-5" />
               </Link>
               <FiZap className="h-8 w-8 text-primary-500" />
-              <h1 className="ml-2 text-2xl font-bold text-black dark:text-white">Health Twin</h1>
+              <h1 className="ml-2 text-2xl font-bold text-gray-900">Health Twin</h1>
             </div>
             <div className="flex items-center space-x-4">
               <Link to="/virtual-doctor" className="btn btn-outline btn-md">
@@ -364,8 +364,8 @@ export const HealthTwin: React.FC = () => {
                         onClick={() => handleMetricSelect(metric)}
                         className={`w-full p-4 rounded-lg border text-left transition-all hover:shadow-md ${
                           selectedMetric?.type === metric.type
-                            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                            ? 'border-primary-500 bg-primary-50'
+                            : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
                         <div className="flex items-center">
@@ -406,7 +406,7 @@ export const HealthTwin: React.FC = () => {
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={decrementValue}
-                          className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50"
                         >
                           <FiMinus className="h-4 w-4" />
                         </button>
@@ -422,7 +422,7 @@ export const HealthTwin: React.FC = () => {
                         />
                         <button
                           onClick={incrementValue}
-                          className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50"
                         >
                           <FiPlus className="h-4 w-4" />
                         </button>
@@ -581,12 +581,12 @@ export const HealthTwin: React.FC = () => {
             </div>
             <div className="card-content">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="text-center py-12 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="text-center py-12 bg-gray-50 rounded-lg">
                   <FiTrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h4 className="font-medium text-black dark:text-white mb-2">7-Day Trend</h4>
                   <p className="text-sm text-gray-800 dark:text-gray-300">Chart will be displayed here</p>
                 </div>
-                <div className="text-center py-12 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="text-center py-12 bg-gray-50 rounded-lg">
                   <FiCalendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h4 className="font-medium text-black dark:text-white mb-2">30-Day Trend</h4>
                   <p className="text-sm text-gray-800 dark:text-gray-300">Chart will be displayed here</p>

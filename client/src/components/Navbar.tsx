@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FiHeart } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
+import LOGO from "../../public/logo.png"
 
 export default function Navbar() {
 
@@ -35,8 +36,7 @@ export default function Navbar() {
                     >
                         <div className="flex items-center gap-x-10">
                             <Link className="font-semibold flex justify-center items-center" to="/" title="Home">
-                                            <FiHeart className="h-6 w-6 text-primary-400" />&nbsp;
-                            
+                                <img  src={LOGO} className="h-6 w-6 text-primary-400" />&nbsp;
                                 Greedoc
                             </Link>
                         </div>

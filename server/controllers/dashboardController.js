@@ -86,20 +86,29 @@ class DashboardController {
     try {
       console.log("Getting patient stats for doctor:", doctorId);
 
-      // For now, return mock data since Firebase is not configured
-      // TODO: Replace with actual Firebase queries once configuration is fixed
-      console.log(
-        "Using mock patient stats due to Firebase configuration issues"
-      );
+      // Get real patients from the database
+      const patients = await User.findPatientsByDoctor(doctorId);
+
+      // Calculate statistics based on actual patient data
+      const total = patients.length;
+      const active = patients.filter(
+        (patient) => patient.isActive !== false
+      ).length;
+      const inactive = patients.filter(
+        (patient) => patient.isActive === false
+      ).length;
+      const pending = patients.filter(
+        (patient) => patient.status === "pending"
+      ).length;
 
       const stats = {
-        total: 1, // Mock data - you have 1 patient
-        active: 1,
-        inactive: 0,
-        pending: 0,
+        total,
+        active,
+        inactive,
+        pending,
       };
 
-      console.log("Patient stats (mock):", stats);
+      console.log("Patient stats (real data):", stats);
       return stats;
     } catch (error) {
       console.error("Error getting patient stats:", error);
@@ -115,19 +124,26 @@ class DashboardController {
     try {
       console.log("Getting report stats for doctor:", doctorId);
 
-      // For now, return mock data since Firebase is not configured
-      // TODO: Replace with actual Firebase queries once configuration is fixed
-      console.log(
-        "Using mock report stats due to Firebase configuration issues"
-      );
+      // Get real follow-ups from the database
+      const FollowUp = require("../models/FollowUp");
+      const followups = await FollowUp.findByDoctorId(doctorId);
+
+      // Calculate statistics based on actual follow-up data
+      const total = followups.length;
+      const pending = followups.filter(
+        (followup) => followup.status === "pending"
+      ).length;
+      const completed = followups.filter(
+        (followup) => followup.status === "completed"
+      ).length;
 
       const stats = {
-        pending: 2, // Mock data - 2 pending follow-ups
-        completed: 1,
-        total: 3,
+        pending,
+        completed,
+        total,
       };
 
-      console.log("Report stats (mock):", stats);
+      console.log("Report stats (real data):", stats);
       return stats;
     } catch (error) {
       console.error("Error getting report stats:", error);
@@ -159,20 +175,19 @@ class DashboardController {
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
       const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
 
-      // For now, return mock data since Firebase is not configured
-      // TODO: Replace with actual Firebase queries once configuration is fixed
-      console.log(
-        "Using mock appointment stats due to Firebase configuration issues"
-      );
+      // Get real appointments from the database
+      // For now, return zero appointments since we don't have an appointments collection yet
+      // TODO: Implement when appointments system is added
+      console.log("Using real appointment stats (currently zero)");
 
       const stats = {
-        today: 1, // Mock data - 1 appointment today
-        thisWeek: 3,
-        thisMonth: 8,
-        total: 12,
+        today: 0, // Real data - no appointments yet
+        thisWeek: 0,
+        thisMonth: 0,
+        total: 0,
       };
 
-      console.log("Appointment stats (mock):", stats);
+      console.log("Appointment stats (real data):", stats);
       return stats;
     } catch (error) {
       console.error("Error getting appointment stats:", error);

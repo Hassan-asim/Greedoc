@@ -54,7 +54,8 @@ app.use("/api/dashboard", require("./routes/dashboard"));
 app.use("/api/health-data", require("./routes/healthData"));
 app.use("/api/chat", require("./routes/chat"));
 app.use("/api/ai", require("./routes/ai"));
-app.use("/api/test", require("./routes/test-data"));
+app.use("/api/events", require("./routes/events"));
+app.use("/api/notifications", require("./routes/notifications"));
 
 // Health check endpoint
 app.get("/api/health-check", (req, res) => {
@@ -63,6 +64,15 @@ app.get("/api/health-check", (req, res) => {
     message: "Greedoc API is running",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
+  });
+});
+
+// Simple test endpoint
+app.get("/api/test", (req, res) => {
+  res.status(200).json({
+    status: "success",
+    message: "Test endpoint working",
+    timestamp: new Date().toISOString(),
   });
 });
 

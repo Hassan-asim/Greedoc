@@ -95,6 +95,7 @@ jobs:
           CI: false
           SKIP_PREFLIGHT_CHECK: true
           GENERATE_SOURCEMAP: false
+          VITE_API_URL: ${{ secrets.CLIENT_URL }}
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0

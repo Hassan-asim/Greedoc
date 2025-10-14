@@ -47,7 +47,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:prod": "vite build",
+    "build:prod": "vite build && npm run copy-favicon",
+    "copy-favicon": "node -e \"const fs=require('fs'); const path=require('path'); ['favicon.ico','favicon.svg'].forEach(f=>{try{fs.copyFileSync(path.join('public',f),path.join('dist',f));console.log('Copied',f);}catch(e){console.log('Skipped',f);}})\"",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "type-check": "tsc --noEmit"

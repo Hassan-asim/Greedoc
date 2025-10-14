@@ -2,9 +2,9 @@ name: Deploy to Google Cloud Run and Firebase Hosting
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, frontend ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, frontend ]
 
 jobs:
   deploy-backend:

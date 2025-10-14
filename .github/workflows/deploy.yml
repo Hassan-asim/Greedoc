@@ -32,8 +32,17 @@ jobs:
 
       - name: Setup Google Cloud CLI
         run: |
-          echo '${{ secrets.GCP_SA_KEY }}' > /tmp/gcp-key.json
-          gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+          echo "Checking if secret exists..."
+          if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
+            echo "ERROR: GCP_SA_KEY secret is empty or not set"
+            exit 1
+          fi
+          echo "Secret exists, writing to file..."
+          echo '${{ secrets.GCP_SA_KEY }}' > /tmp/greedoc-deploy-key.json
+          echo "File written, checking content..."
+          head -c 100 /tmp/greedoc-deploy-key.json
+          echo "Authenticating..."
+          gcloud auth activate-service-account --key-file=/tmp/greedoc-deploy-key.json
           gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
 
       - name: Deploy to Google Cloud Run

@@ -1,3 +1,20 @@
+export interface User {
+  _id: string;
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: 'patient' | 'doctor' | 'admin';
+  phoneNumber?: string;
+  cnic?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  status?: 'active' | 'pending' | 'inactive';
+  lastVisit?: string;
+  medications?: number;
+  appointments?: number;
+}
+
 export interface Patient {
   id: string;
   firstName: string;

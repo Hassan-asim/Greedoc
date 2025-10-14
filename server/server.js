@@ -79,6 +79,25 @@ app.use("/api/events", require("./routes/events"));
 app.use("/api/notifications", require("./routes/notifications"));
 app.use("/api/chat", require("./routes/chat"));
 
+// Health check endpoint
+app.get("/api/health-check", (req, res) => {
+  res.status(200).json({
+    status: "success",
+    message: "Greedoc API is running",
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+  });
+});
+
+// Simple test endpoint
+app.get("/api/test", (req, res) => {
+  res.status(200).json({
+    status: "success",
+    message: "Test endpoint working",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Root API endpoint
 app.get("/api", (req, res) => {
   res.status(200).json({

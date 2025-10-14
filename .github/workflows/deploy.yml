@@ -45,17 +45,21 @@ jobs:
           gcloud auth activate-service-account --key-file=/tmp/greedoc-deploy-key.json
           gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
 
-      - name: Create Artifact Registry Repository
+      - name: Build and Push Docker Image
         run: |
-          gcloud artifacts repositories create cloud-run-source-deploy \
-            --repository-format=docker \
-            --location=us-central1 \
-            --description="Repository for Cloud Run source deployments" || echo "Repository already exists"
+          # Build Docker image
+          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/greedoc-backend:latest ./server
+          
+          # Configure Docker to use gcloud as a credential helper
+          gcloud auth configure-docker
+          
+          # Push image to Google Container Registry
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/greedoc-backend:latest
 
       - name: Deploy to Google Cloud Run
         run: |
           gcloud run deploy greedoc-backend \
-            --source ./server \
+            --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/greedoc-backend:latest \
             --region us-central1 \
             --platform managed \
             --allow-unauthenticated \
